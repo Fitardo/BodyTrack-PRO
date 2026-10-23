@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { Food } from '../../types';
 import { calculateMacroCalories } from '../../utils/calculations';
-import { AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle, Barcode, ShieldCheck } from 'lucide-react';
 
 interface CustomFoodModalProps {
   isOpen: boolean;
@@ -22,13 +22,16 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
 }) => {
   const [name, setName] = useState<string>('');
   const [brand, setBrand] = useState<string>('');
+  const [barcode, setBarcode] = useState<string>('');
   const [servingSize, setServingSize] = useState<string>('100');
   const [servingUnit, setServingUnit] = useState<string>('g');
+  const [servingWeightG, setServingWeightG] = useState<string>('100');
   const [prepState, setPrepState] = useState<'raw' | 'cooked' | 'na'>('raw');
   const [protein, setProtein] = useState<string>('');
   const [carbs, setCarbs] = useState<string>('');
   const [fat, setFat] = useState<string>('');
   const [fiber, setFiber] = useState<string>('');
+  const [badgeType, setBadgeType] = useState<'verified' | 'community'>('community');
   const [error, setError] = useState<string>('');
 
   const pNum = parseFloat(protein) || 0;
@@ -52,8 +55,10 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
       id: `food-custom-${Date.now()}`,
       name: name.trim(),
       brand: brand.trim() || undefined,
+      barcode: barcode.trim() || undefined,
       serving_size: servSize,
       serving_unit: servingUnit,
+      serving_weight_g: parseFloat(servingWeightG) || 100,
       preparation_state: prepState,
       calories_kcal: totalKcal,
       protein_g: Number(pNum.toFixed(1)),
@@ -61,6 +66,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
       fat_g: Number(fNum.toFixed(1)),
       fiber_g: parseFloat(fiber) || 0,
       source: 'custom',
+      data_source_badge: badgeType,
     };
 
     onSave(newFood);
@@ -99,7 +105,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label htmlFor="food-brand" className="block text-xs font-medium text-zinc-300 mb-1">
               Marca (opcional)
@@ -115,30 +121,31 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
           </div>
 
           <div>
-            <label htmlFor="food-prep" className="block text-xs font-medium text-zinc-300 mb-1">
-              Estado de preparación
+            <label htmlFor="food-barcode" className="block text-xs font-medium text-zinc-300 mb-1 flex items-center gap-1">
+              <Barcode className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Código de barras EAN-13 (opcional)</span>
             </label>
-            <select
-              id="food-prep"
-              value={prepState}
-              onChange={(e) => setPrepState(e.target.value as any)}
-              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-emerald-500"
-            >
-              <option value="raw">Crudo / en seco</option>
-              <option value="cooked">Cocido / hervido / plancha</option>
-              <option value="na">No aplica (bebida/snack)</option>
-            </select>
+            <input
+              id="food-barcode"
+              type="text"
+              inputMode="numeric"
+              placeholder="Ej: 7791337601125"
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value)}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+            />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2.5">
           <div>
             <label htmlFor="food-serving" className="block text-xs font-medium text-zinc-300 mb-1">
-              Tamaño de porción base
+              Porción base
             </label>
             <input
               id="food-serving"
               type="number"
+              inputMode="decimal"
               value={servingSize}
               onChange={(e) => setServingSize(e.target.value)}
               className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
@@ -162,12 +169,61 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               <option value="porción">Porción</option>
             </select>
           </div>
+
+          <div>
+            <label htmlFor="food-weight-eq" className="block text-xs font-medium text-zinc-300 mb-1">
+              Equiv. en gramos
+            </label>
+            <input
+              id="food-weight-eq"
+              type="number"
+              inputMode="decimal"
+              value={servingWeightG}
+              onChange={(e) => setServingWeightG(e.target.value)}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="food-prep" className="block text-xs font-medium text-zinc-300 mb-1">
+              Estado de preparación
+            </label>
+            <select
+              id="food-prep"
+              value={prepState}
+              onChange={(e) => setPrepState(e.target.value as any)}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-emerald-500"
+            >
+              <option value="raw">Crudo / en seco</option>
+              <option value="cooked">Cocido / hervido / plancha</option>
+              <option value="na">No aplica (bebida/snack)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-zinc-300 mb-1 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Origen del dato</span>
+            </label>
+            <select
+              value={badgeType}
+              onChange={(e) => setBadgeType(e.target.value as 'verified' | 'community')}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-200 text-xs focus:outline-none focus:border-emerald-500"
+            >
+              <option value="community">Comunidad / Ingreso Manual</option>
+              <option value="verified">Etiqueta Oficial Verificada</option>
+            </select>
+          </div>
         </div>
 
         {/* Nutritional Information per portion */}
         <div className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-zinc-300">Nutrientes por cada {servingSize} {servingUnit}</span>
+            <span className="text-xs font-semibold text-zinc-300">
+              Nutrientes por cada {servingSize} {servingUnit}
+            </span>
             <span className="text-xs font-mono font-bold text-emerald-400">{totalKcal} kcal</span>
           </div>
 
@@ -177,6 +233,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               <input
                 id="food-p"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 placeholder="0"
                 value={protein}
@@ -189,6 +246,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               <input
                 id="food-c"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 placeholder="0"
                 value={carbs}
@@ -201,6 +259,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               <input
                 id="food-f"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 placeholder="0"
                 value={fat}
@@ -213,6 +272,7 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
               <input
                 id="food-fib"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
                 placeholder="0"
                 value={fiber}
@@ -227,13 +287,13 @@ export const CustomFoodModal: React.FC<CustomFoodModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 transition-colors"
+            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm"
+            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm cursor-pointer"
           >
             Guardar en Biblioteca
           </button>

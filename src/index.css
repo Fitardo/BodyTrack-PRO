@@ -1,1 +1,299 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .font-mono,
+  code,
+  pre,
+  input[type="number"] {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ============================================================================
+   DARK MODE ENHANCEMENTS (.theme-dark)
+   Ensures secondary & muted labels are crisp and never washed-out
+   ============================================================================ */
+.theme-dark {
+  color-scheme: dark;
+  background-color: #09090b;
+  color: #f8fafc;
+}
+
+.theme-dark .text-zinc-300 {
+  color: #e2e8f0 !important;
+}
+
+.theme-dark .text-zinc-400 {
+  color: #cbd5e1 !important;
+}
+
+.theme-dark .text-zinc-500 {
+  color: #94a3b8 !important;
+}
+
+/* ============================================================================
+   HIGH-CONTRAST LIGHT MODE SYSTEM (.theme-light)
+   Guarantees WCAG AAA/AA legibility across all cards, tables, modals & inputs
+   ============================================================================ */
+.theme-light {
+  color-scheme: light;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* 1. Surfaces & Containers */
+.theme-light .bg-zinc-950,
+.theme-light .bg-zinc-950\/95,
+.theme-light .bg-zinc-950\/90,
+.theme-light .bg-zinc-950\/80,
+.theme-light .bg-zinc-950\/70,
+.theme-light .bg-zinc-950\/60,
+.theme-light .bg-zinc-950\/50,
+.theme-light .bg-zinc-950\/40 {
+  background-color: #f8fafc !important;
+}
+
+.theme-light header.bg-zinc-950\/80,
+.theme-light aside.bg-zinc-950,
+.theme-light .bg-zinc-900,
+.theme-light .bg-zinc-900\/95,
+.theme-light .bg-zinc-900\/90,
+.theme-light .bg-zinc-900\/80,
+.theme-light .bg-zinc-900\/70,
+.theme-light .bg-zinc-900\/60,
+.theme-light .bg-zinc-900\/50,
+.theme-light .bg-zinc-900\/40 {
+  background-color: #ffffff !important;
+}
+
+.theme-light .bg-zinc-800,
+.theme-light .bg-zinc-800\/90,
+.theme-light .bg-zinc-800\/80,
+.theme-light .bg-zinc-800\/70,
+.theme-light .bg-zinc-800\/60,
+.theme-light .bg-zinc-800\/50,
+.theme-light .bg-zinc-800\/40 {
+  background-color: #e2e8f0 !important;
+}
+
+.theme-light .hover\:bg-zinc-900:hover,
+.theme-light .hover\:bg-zinc-900\/60:hover,
+.theme-light .hover\:bg-zinc-800:hover,
+.theme-light .hover\:bg-zinc-700:hover {
+  background-color: #cbd5e1 !important;
+}
+
+/* Gradients & Tinted Banners in Light Mode */
+.theme-light .from-zinc-900,
+.theme-light .via-zinc-900,
+.theme-light .to-zinc-950 {
+  --tw-gradient-from: #ffffff !important;
+  --tw-gradient-via: #f8fafc !important;
+  --tw-gradient-to: #ecfdf5 !important;
+}
+
+.theme-light .from-emerald-950\/60,
+.theme-light .to-emerald-950\/30,
+.theme-light .bg-emerald-950,
+.theme-light .bg-emerald-950\/70,
+.theme-light .bg-emerald-950\/60,
+.theme-light .bg-emerald-950\/50,
+.theme-light .bg-emerald-950\/40,
+.theme-light .bg-emerald-950\/30 {
+  background-color: #ecfdf5 !important;
+  --tw-gradient-from: #d1fae5 !important;
+}
+
+.theme-light .bg-amber-950,
+.theme-light .bg-amber-950\/60,
+.theme-light .bg-amber-950\/50,
+.theme-light .bg-amber-950\/40,
+.theme-light .bg-amber-950\/30 {
+  background-color: #fffbeb !important;
+}
+
+.theme-light .bg-rose-950,
+.theme-light .bg-rose-950\/60,
+.theme-light .bg-rose-950\/50,
+.theme-light .bg-rose-950\/40,
+.theme-light .bg-rose-950\/30 {
+  background-color: #fff1f2 !important;
+}
+
+/* Soft semantic pill backgrounds in Light Mode */
+.theme-light .bg-emerald-500\/10,
+.theme-light .bg-emerald-500\/15,
+.theme-light .bg-emerald-500\/20,
+.theme-light .bg-emerald-500\/25 {
+  background-color: #d1fae5 !important;
+}
+
+.theme-light .bg-amber-500\/10,
+.theme-light .bg-amber-500\/15,
+.theme-light .bg-amber-500\/20 {
+  background-color: #fef3c7 !important;
+}
+
+.theme-light .bg-rose-500\/10,
+.theme-light .bg-rose-500\/15,
+.theme-light .bg-rose-500\/20 {
+  background-color: #ffe4e6 !important;
+}
+
+.theme-light .bg-cyan-500\/10,
+.theme-light .bg-cyan-500\/15,
+.theme-light .bg-cyan-500\/20 {
+  background-color: #e0f2fe !important;
+}
+
+.theme-light .bg-purple-500\/10,
+.theme-light .bg-purple-500\/20,
+.theme-light .bg-violet-500\/10 {
+  background-color: #ede9fe !important;
+}
+
+/* 2. Borders */
+.theme-light .border-zinc-800,
+.theme-light .border-zinc-800\/90,
+.theme-light .border-zinc-800\/80,
+.theme-light .border-zinc-800\/70,
+.theme-light .border-zinc-800\/60,
+.theme-light .border-zinc-800\/50,
+.theme-light .border-zinc-700,
+.theme-light .border-zinc-700\/80,
+.theme-light .border-zinc-700\/50 {
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light .divide-zinc-800 > :not([hidden]) ~ :not([hidden]),
+.theme-light .divide-zinc-800\/80 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #cbd5e1 !important;
+}
+
+/* 3. High-Contrast Typography in Light Mode */
+.theme-light .text-white:not(.bg-rose-600):not(.bg-emerald-600):not(.bg-blue-600),
+.theme-light .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+.theme-light .text-zinc-200,
+.theme-light .text-zinc-300 {
+  color: #1e293b !important;
+}
+
+.theme-light .text-zinc-400 {
+  color: #334155 !important;
+}
+
+.theme-light .text-zinc-500,
+.theme-light .text-zinc-600 {
+  color: #475569 !important;
+}
+
+.theme-light .hover\:text-white:hover,
+.theme-light .hover\:text-zinc-200:hover {
+  color: #0f172a !important;
+}
+
+/* 4. High-Contrast Semantic Accent Text in Light Mode */
+.theme-light .text-emerald-400,
+.theme-light .text-emerald-300,
+.theme-light .text-emerald-200,
+.theme-light .text-emerald-200\/90,
+.theme-light .text-emerald-100 {
+  color: #047857 !important;
+}
+
+.theme-light .text-teal-400,
+.theme-light .text-teal-300 {
+  color: #0f766e !important;
+}
+
+.theme-light .text-amber-400,
+.theme-light .text-amber-300,
+.theme-light .text-amber-200,
+.theme-light .text-amber-200\/90,
+.theme-light .text-amber-100 {
+  color: #b45309 !important;
+}
+
+.theme-light .text-rose-400,
+.theme-light .text-rose-300,
+.theme-light .text-rose-200,
+.theme-light .text-rose-200\/90,
+.theme-light .text-rose-100 {
+  color: #be123c !important;
+}
+
+.theme-light .text-cyan-400,
+.theme-light .text-cyan-300 {
+  color: #0369a1 !important;
+}
+
+.theme-light .text-blue-400,
+.theme-light .text-blue-300 {
+  color: #1d4ed8 !important;
+}
+
+.theme-light .text-purple-400,
+.theme-light .text-purple-300,
+.theme-light .text-violet-400 {
+  color: #6d28d9 !important;
+}
+
+/* Primary Action Buttons in Light Mode */
+.theme-light .bg-emerald-500 {
+  background-color: #059669 !important;
+}
+.theme-light .bg-emerald-500:hover,
+.theme-light .hover\:bg-emerald-400:hover {
+  background-color: #047857 !important;
+}
+.theme-light .bg-emerald-500.text-zinc-950,
+.theme-light .bg-emerald-500 .text-zinc-950 {
+  color: #ffffff !important;
+}
+
+/* 5. Form Controls (Inputs, Selects, Textareas) in Light Mode */
+.theme-light input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.theme-light select,
+.theme-light textarea {
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.theme-light input::placeholder,
+.theme-light textarea::placeholder {
+  color: #64748b !important;
+}
+
+.theme-light input:focus,
+.theme-light select:focus,
+.theme-light textarea:focus {
+  border-color: #059669 !important;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.15) !important;
+}
+
+/* 6. Charts & SVG Text in Light Mode */
+.theme-light .recharts-cartesian-axis-tick-value,
+.theme-light .recharts-text {
+  fill: #334155 !important;
+  font-weight: 600;
+}
+
+.theme-light .recharts-cartesian-grid line {
+  stroke: #cbd5e1 !important;
+}

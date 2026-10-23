@@ -5,8 +5,26 @@
 
 import React, { useState } from 'react';
 import { WeighIn, BodyMeasurement, PhysicalGoal, UserProfile } from '../../types';
-import { calculateWeeklyAverage, calculateMoving7DayAverages, calculateUSNavyBodyFat, calculateBodyComposition } from '../../utils/calculations';
-import { Scale, Plus, Edit2, Trash2, Info, Ruler, Sparkles, TrendingDown, Target, Calculator } from 'lucide-react';
+import {
+  calculateWeeklyAverage,
+  calculateUSNavyBodyFat,
+  calculateBodyComposition,
+} from '../../utils/calculations';
+import {
+  Scale,
+  Plus,
+  Edit2,
+  Trash2,
+  Info,
+  Target,
+  HelpCircle,
+  Minus,
+} from 'lucide-react';
+import {
+  ANTHROPOMETRIC_BOUNDS,
+  stepMetric,
+  EDUCATIONAL_TOOLTIPS,
+} from '../../utils/auditAndRetentionUtils';
 
 interface WeightViewProps {
   weighIns: WeighIn[];
@@ -36,10 +54,15 @@ export const WeightView: React.FC<WeightViewProps> = ({
   onUpdateGoal,
 }) => {
   const [subTab, setSubTab] = useState<'weigh_ins' | 'measurements' | 'goals'>('weigh_ins');
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   // Sorted weigh-ins ascending and descending for display
-  const sortedAsc = [...weighIns].sort((a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime());
-  const sortedDesc = [...weighIns].sort((a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime());
+  const sortedAsc = [...weighIns].sort(
+    (a, b) => new Date(a.measured_at).getTime() - new Date(b.measured_at).getTime()
+  );
+  const sortedDesc = [...weighIns].sort(
+    (a, b) => new Date(b.measured_at).getTime() - new Date(a.measured_at).getTime()
+  );
 
   const latestWeighIn = sortedAsc[sortedAsc.length - 1];
   const initialWeighIn = sortedAsc[0];
@@ -47,16 +70,34 @@ export const WeightView: React.FC<WeightViewProps> = ({
   const current7d = calculateWeeklyAverage(sortedAsc.slice(-7));
   const prev7d = calculateWeeklyAverage(sortedAsc.slice(-14, -7));
 
-  const totalDeltaKg = latestWeighIn && initialWeighIn ? Number((latestWeighIn.weight_kg - initialWeighIn.weight_kg).toFixed(2)) : 0;
-  const totalDeltaPct = initialWeighIn ? Number(((totalDeltaKg / initialWeighIn.weight_kg) * 100).toFixed(2)) : 0;
-  const weeklyRateKg = current7d.average !== null && prev7d.average !== null ? Number((current7d.average - prev7d.average).toFixed(2)) : null;
+  const totalDeltaKg =
+    latestWeighIn && initialWeighIn
+      ? Number((latestWeighIn.weight_kg - initialWeighIn.weight_kg).toFixed(2))
+      : 0;
+  const totalDeltaPct = initialWeighIn
+    ? Number(((totalDeltaKg / initialWeighIn.weight_kg) * 100).toFixed(2))
+    : 0;
+  const weeklyRateKg =
+    current7d.average !== null && prev7d.average !== null
+      ? Number((current7d.average - prev7d.average).toFixed(2))
+      : null;
 
   // Latest measurement & Navy Body Fat
   const latestMeas = measurements[measurements.length - 1];
-  const navyBf = latestMeas && latestMeas.neck_cm
-    ? calculateUSNavyBodyFat(profile.sex_for_equations, profile.height_cm, latestMeas.waist_cm, latestMeas.neck_cm, latestMeas.hip_cm)
-    : null;
-  const bodyComp = navyBf !== null && latestWeighIn ? calculateBodyComposition(latestWeighIn.weight_kg, navyBf) : null;
+  const navyBf =
+    latestMeas && latestMeas.neck_cm
+      ? calculateUSNavyBodyFat(
+          profile.sex_for_equations,
+          profile.height_cm,
+          latestMeas.waist_cm,
+          latestMeas.neck_cm,
+          latestMeas.hip_cm
+        )
+      : null;
+  const bodyComp =
+    navyBf !== null && latestWeighIn
+      ? calculateBodyComposition(latestWeighIn.weight_kg, navyBf)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -77,7 +118,7 @@ export const WeightView: React.FC<WeightViewProps> = ({
             <button
               type="button"
               onClick={() => setSubTab('weigh_ins')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 subTab === 'weigh_ins' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -86,7 +127,7 @@ export const WeightView: React.FC<WeightViewProps> = ({
             <button
               type="button"
               onClick={() => setSubTab('measurements')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 subTab === 'measurements' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -95,7 +136,7 @@ export const WeightView: React.FC<WeightViewProps> = ({
             <button
               type="button"
               onClick={() => setSubTab('goals')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                 subTab === 'goals' ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-400 hover:text-white'
               }`}
             >
@@ -106,8 +147,9 @@ export const WeightView: React.FC<WeightViewProps> = ({
           {subTab === 'weigh_ins' ? (
             <button
               type="button"
+              data-testid="open-add-weighin-btn"
               onClick={onOpenAddWeighIn}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-sm shadow-emerald-500/20 active:scale-98 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs shadow-sm shadow-emerald-500/20 active:scale-98 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Añadir Pesaje</span>
@@ -115,8 +157,9 @@ export const WeightView: React.FC<WeightViewProps> = ({
           ) : subTab === 'measurements' ? (
             <button
               type="button"
+              data-testid="open-add-measurement-btn"
               onClick={onOpenAddMeasurement}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-sm shadow-amber-500/20 active:scale-98 transition-all"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs shadow-sm shadow-amber-500/20 active:scale-98 transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
               <span>Añadir Medida</span>
@@ -130,7 +173,9 @@ export const WeightView: React.FC<WeightViewProps> = ({
         <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
           <span className="text-[11px] text-zinc-400 block font-medium">Peso Actual</span>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold font-mono text-white">{latestWeighIn ? latestWeighIn.weight_kg : '--'}</span>
+            <span className="text-xl font-bold font-mono text-white">
+              {latestWeighIn ? latestWeighIn.weight_kg : '--'}
+            </span>
             <span className="text-xs text-zinc-400 font-semibold">kg</span>
           </div>
           <span className="text-[10px] text-emerald-400 mt-1 block font-mono">
@@ -138,10 +183,24 @@ export const WeightView: React.FC<WeightViewProps> = ({
           </span>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800">
-          <span className="text-[11px] text-zinc-400 block font-medium">Promedio 7 Días</span>
+        <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 relative">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-zinc-400 font-medium">Media Móvil 7 Días</span>
+            <button
+              type="button"
+              onClick={() =>
+                setActiveTooltip(activeTooltip === 'moving_average' ? null : 'moving_average')
+              }
+              className="text-cyan-400 hover:text-cyan-300 cursor-pointer"
+              title="¿Qué es la Media móvil?"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+            </button>
+          </div>
           <div className="mt-1 flex items-baseline gap-1">
-            <span className="text-xl font-bold font-mono text-cyan-400">{current7d.average ?? '--'}</span>
+            <span className="text-xl font-bold font-mono text-cyan-400">
+              {current7d.average ?? '--'}
+            </span>
             <span className="text-xs text-zinc-400 font-semibold">kg</span>
           </div>
           <span className="text-[10px] text-zinc-400 mt-1 block">
@@ -176,13 +235,37 @@ export const WeightView: React.FC<WeightViewProps> = ({
         </div>
       </div>
 
+      {activeTooltip === 'moving_average' && (
+        <div className="p-3.5 rounded-xl bg-zinc-900 border border-cyan-500/40 text-xs text-zinc-200 space-y-1">
+          <div className="flex items-center justify-between">
+            <strong className="text-cyan-400">{EDUCATIONAL_TOOLTIPS.moving_average.title}</strong>
+            <button
+              type="button"
+              onClick={() => setActiveTooltip(null)}
+              className="text-zinc-400 hover:text-white font-bold cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+          <p>{EDUCATIONAL_TOOLTIPS.moving_average.shortDescription}</p>
+          <p className="text-[11px] text-zinc-400 font-mono">
+            {EDUCATIONAL_TOOLTIPS.moving_average.scientificContext}
+          </p>
+        </div>
+      )}
+
       {/* Scientific Education Banner */}
       <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800 flex items-start gap-3">
         <Info className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
         <div className="text-xs text-zinc-300 space-y-1">
-          <span className="font-semibold text-white block">Guía de Interpretación de Peso y Fluctaciones Hídricas:</span>
+          <span className="font-semibold text-white block">
+            Guía de Interpretación de Peso y Fluctuaciones Hídricas:
+          </span>
           <p className="text-zinc-400 leading-relaxed">
-            Nunca tomes una pesada individual como reflejo de ganancia o pérdida de tejido graso. 1 gramo de glucógeno muscular almacena entre 3 y 4 gramos de agua. Comidas saladas, cortisol por estrés o inflamación tras entrenamientos intensos (DOMS) retienen agua extracelular. <strong>El indicador verídico de recomposición es el descenso continuo de la media móvil semanal junto a la reducción de cintura y la preservación de cargas en el gimnasio.</strong>
+            Nunca tomes una pesada individual como reflejo de ganancia o pérdida de tejido graso. 1 gramo de glucógeno muscular almacena entre 3 y 4 gramos de agua. Comidas saladas, cortisol por estrés o inflamación tras entrenamientos intensos (DOMS) retienen agua extracelular.{' '}
+            <strong>
+              El indicador verídico de recomposición es el descenso continuo de la media móvil semanal junto a la reducción de cintura y la preservación de cargas en el gimnasio.
+            </strong>
           </p>
         </div>
       </div>
@@ -215,18 +298,28 @@ export const WeightView: React.FC<WeightViewProps> = ({
                     <td className="px-4 py-3 font-mono text-sm font-bold text-cyan-400">{w.weight_kg} kg</td>
                     <td className="px-4 py-3 text-zinc-400 font-mono">{w.time_of_day || '--'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                        w.fasting ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400'
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          w.fasting
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-zinc-800 text-zinc-400'
+                        }`}
+                      >
                         {w.fasting ? 'Ayunas' : 'No ayunas'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
-                      {w.context === 'salty_food' ? 'Comida salada' :
-                       w.context === 'post_cheat_meal' ? 'Comida libre' :
-                       w.context === 'post_workout' ? 'Post entreno duro' :
-                       w.context === 'poor_sleep' ? 'Mal descanso' :
-                       w.context === 'travel' ? 'Viaje' : 'Normal'}
+                      {w.context === 'salty_food'
+                        ? 'Comida salada'
+                        : w.context === 'post_cheat_meal'
+                        ? 'Comida libre'
+                        : w.context === 'post_workout'
+                        ? 'Post entreno duro'
+                        : w.context === 'poor_sleep'
+                        ? 'Mal descanso'
+                        : w.context === 'travel'
+                        ? 'Viaje'
+                        : 'Normal'}
                     </td>
                     <td className="px-4 py-3 text-zinc-400 max-w-xs truncate">{w.notes || '--'}</td>
                     <td className="px-4 py-3 text-right">
@@ -235,19 +328,16 @@ export const WeightView: React.FC<WeightViewProps> = ({
                           type="button"
                           onClick={() => onOpenEditWeighIn(w)}
                           aria-label={`Editar pesaje del ${w.measured_at}`}
-                          className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+                          className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(`¿Eliminar pesaje de ${w.weight_kg} kg del ${w.measured_at}?`)) {
-                              onDeleteWeighIn(w.id);
-                            }
-                          }}
+                          data-testid={`delete-weighin-${w.id}`}
+                          onClick={() => onDeleteWeighIn(w.id)}
                           aria-label={`Eliminar pesaje del ${w.measured_at}`}
-                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-zinc-800 transition-colors"
+                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -289,11 +379,21 @@ export const WeightView: React.FC<WeightViewProps> = ({
                   <tr key={m.id} className="hover:bg-zinc-800/30 transition-colors">
                     <td className="px-4 py-3 font-mono font-medium text-white">{m.measured_at}</td>
                     <td className="px-4 py-3 font-mono font-bold text-amber-400">{m.waist_cm} cm</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">{m.neck_cm ? `${m.neck_cm} cm` : '--'}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">{m.chest_cm ? `${m.chest_cm} cm` : '--'}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">{m.hip_cm ? `${m.hip_cm} cm` : '--'}</td>
-                    <td className="px-4 py-3 font-mono text-emerald-400">{m.arm_flexed_cm ? `${m.arm_flexed_cm} cm` : '--'}</td>
-                    <td className="px-4 py-3 font-mono text-zinc-300">{m.thigh_cm ? `${m.thigh_cm} cm` : '--'}</td>
+                    <td className="px-4 py-3 font-mono text-zinc-300">
+                      {m.neck_cm ? `${m.neck_cm} cm` : '--'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-zinc-300">
+                      {m.chest_cm ? `${m.chest_cm} cm` : '--'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-zinc-300">
+                      {m.hip_cm ? `${m.hip_cm} cm` : '--'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-emerald-400">
+                      {m.arm_flexed_cm ? `${m.arm_flexed_cm} cm` : '--'}
+                    </td>
+                    <td className="px-4 py-3 font-mono text-zinc-300">
+                      {m.thigh_cm ? `${m.thigh_cm} cm` : '--'}
+                    </td>
                     <td className="px-4 py-3 font-mono text-cyan-400 font-semibold">
                       {m.body_fat_percent ? `${m.body_fat_percent}%` : '--'}
                     </td>
@@ -303,19 +403,15 @@ export const WeightView: React.FC<WeightViewProps> = ({
                           type="button"
                           onClick={() => onOpenEditMeasurement(m)}
                           aria-label={`Editar medidas del ${m.measured_at}`}
-                          className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors"
+                          className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm(`¿Eliminar medidas del ${m.measured_at}?`)) {
-                              onDeleteMeasurement(m.id);
-                            }
-                          }}
+                          onClick={() => onDeleteMeasurement(m.id)}
                           aria-label={`Eliminar medidas del ${m.measured_at}`}
-                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-zinc-800 transition-colors"
+                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -338,32 +434,122 @@ export const WeightView: React.FC<WeightViewProps> = ({
               <span>Configuración de Objetivos Físicos</span>
             </h3>
             <p className="text-xs text-zinc-400 mt-1">
-              Los objetivos son metas orientativas que sirven para calibrar el ritmo de recomposición sin imponer pérdidas agresivas.
+              Los objetivos son metas orientativas que sirven para calibrar el ritmo de recomposición, déficit o aumento de masa muscular.
             </p>
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-zinc-300 mb-1">
+                Estrategia Principal
+              </label>
+              <select
+                value={goal.primary_goal}
+                onChange={(e) =>
+                  onUpdateGoal({ ...goal, primary_goal: e.target.value as any })
+                }
+                className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs"
+              >
+                <option value="recomposition">Recomposición Corporal (Perder grasa y ganar músculo)</option>
+                <option value="fat_loss">Pérdida de Grasa Prioritaria (Déficit sostenible)</option>
+                <option value="muscle_gain">Aumento de Masa Muscular (Superávit Calórico)</option>
+                <option value="maintenance">Mantenimiento y Salud Metabólica</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Peso Objetivo (kg)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={goal.target_weight_kg}
-                  onChange={(e) => onUpdateGoal({ ...goal, target_weight_kg: parseFloat(e.target.value) || 78 })}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white font-mono text-sm"
-                />
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                  Peso Objetivo (kg) [{ANTHROPOMETRIC_BOUNDS.weight_kg.min}–{ANTHROPOMETRIC_BOUNDS.weight_kg.max}]
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_weight_kg: stepMetric('weight_kg', goal.target_weight_kg || 78, -0.5),
+                      })
+                    }
+                    className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 cursor-pointer"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    min={ANTHROPOMETRIC_BOUNDS.weight_kg.min}
+                    max={ANTHROPOMETRIC_BOUNDS.weight_kg.max}
+                    value={goal.target_weight_kg}
+                    onChange={(e) =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_weight_kg: parseFloat(e.target.value) || 78,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white font-mono text-sm text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_weight_kg: stepMetric('weight_kg', goal.target_weight_kg || 78, 0.5),
+                      })
+                    }
+                    className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Cintura Objetivo (cm)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  value={goal.target_waist_cm || 80}
-                  onChange={(e) => onUpdateGoal({ ...goal, target_waist_cm: parseFloat(e.target.value) || 80 })}
-                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white font-mono text-sm"
-                />
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                  Cintura Objetivo (cm) [{ANTHROPOMETRIC_BOUNDS.waist_cm.min}–{ANTHROPOMETRIC_BOUNDS.waist_cm.max}]
+                </label>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_waist_cm: stepMetric('waist_cm', goal.target_waist_cm || 80, -0.5),
+                      })
+                    }
+                    className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 cursor-pointer"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    min={ANTHROPOMETRIC_BOUNDS.waist_cm.min}
+                    max={ANTHROPOMETRIC_BOUNDS.waist_cm.max}
+                    value={goal.target_waist_cm || 80}
+                    onChange={(e) =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_waist_cm: parseFloat(e.target.value) || 80,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white font-mono text-sm text-center"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onUpdateGoal({
+                        ...goal,
+                        target_waist_cm: stepMetric('waist_cm', goal.target_waist_cm || 80, 0.5),
+                      })
+                    }
+                    className="p-2 rounded-lg bg-zinc-950 border border-zinc-800 text-zinc-300 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -374,10 +560,12 @@ export const WeightView: React.FC<WeightViewProps> = ({
                 </label>
                 <select
                   value={goal.weekly_rate_percent}
-                  onChange={(e) => onUpdateGoal({ ...goal, weekly_rate_percent: parseFloat(e.target.value) })}
+                  onChange={(e) =>
+                    onUpdateGoal({ ...goal, weekly_rate_percent: parseFloat(e.target.value) })
+                  }
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs"
                 >
-                  <option value="0.25">0.25% (~0.2 kg/sem) - Máxima preservación muscular</option>
+                  <option value="0.25">0.25% (~0.2 kg/sem) - Máxima preservación / Superávit limpio</option>
                   <option value="0.5">0.50% (~0.4 kg/sem) - Ritmo recomendado de recomposición</option>
                   <option value="0.75">0.75% (~0.6 kg/sem) - Déficit moderado-alto</option>
                   <option value="1.0">1.00% (~0.85 kg/sem) - Límite superior conservador</option>
@@ -385,11 +573,15 @@ export const WeightView: React.FC<WeightViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-zinc-300 mb-1">Fecha Objetivo Opcional</label>
+                <label className="block text-xs font-medium text-zinc-300 mb-1">
+                  Fecha Objetivo Opcional
+                </label>
                 <input
                   type="date"
                   value={goal.optional_target_date || ''}
-                  onChange={(e) => onUpdateGoal({ ...goal, optional_target_date: e.target.value })}
+                  onChange={(e) =>
+                    onUpdateGoal({ ...goal, optional_target_date: e.target.value })
+                  }
                   className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs"
                 />
               </div>

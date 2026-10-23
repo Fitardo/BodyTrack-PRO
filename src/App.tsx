@@ -8,6 +8,7 @@ import confetti from 'canvas-confetti';
 import { StorageService } from './services/storage';
 import { analytics } from './services/analytics';
 import { AuthSession } from './types/auth';
+import { WorkspaceInitMode } from './utils/workspaceMode';
 import {
   UserProfile,
   PhysicalGoal,
@@ -27,14 +28,22 @@ import {
   MealCategory,
 } from './types';
 import { calculateLoggingStreak } from './utils/calculations';
-import { ShieldCheck, Sparkles, MessageSquarePlus, KeyRound, Compass } from 'lucide-react';
+import {
+  ShieldCheck,
+  Sparkles,
+  MessageSquarePlus,
+  KeyRound,
+  Compass,
+  Database,
+  RotateCcw,
+} from 'lucide-react';
 
 // Layout
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar, NavTab } from './components/layout/Sidebar';
 import { MobileNav } from './components/layout/MobileNav';
 
-// Modals
+// Modals & Full-Screen Experiences
 import { Modal } from './components/common/Modal';
 import { QuickActionModal } from './components/dashboard/QuickActionModal';
 import { WeighInModal } from './components/weight/WeighInModal';
@@ -43,7 +52,11 @@ import { FoodLogModal } from './components/nutrition/FoodLogModal';
 import { CustomFoodModal } from './components/nutrition/CustomFoodModal';
 import { ActiveWorkoutModal } from './components/workout/ActiveWorkoutModal';
 import { AuthModal } from './components/auth/AuthModal';
-import { OnboardingWizard, OnboardingQuickStartResult } from './components/onboarding/OnboardingWizard';
+import { AuthScreen } from './components/auth/AuthScreen';
+import {
+  OnboardingWizard,
+  OnboardingQuickStartResult,
+} from './components/onboarding/OnboardingWizard';
 import { FeedbackModal } from './components/feedback/FeedbackModal';
 
 // Views
@@ -63,9 +76,22 @@ export default function App() {
   const [currentDate, setCurrentDate] = useState<string>('2026-10-22');
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
   const [theme, setTheme] = useState<'dark' | 'light'>(StorageService.getTheme());
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceInitMode>(() =>
+    StorageService.getWorkspaceMode()
+  );
 
-  // Beta Auth & Onboarding states
-  const [authSession, setAuthSession] = useState<AuthSession | null>(() => StorageService.getAuthSession());
+  // Beta Auth & Full-Screen Entry states
+  const [authSession, setAuthSession] = useState<AuthSession | null>(() =>
+    StorageService.getAuthSession()
+  );
+  const [isAuthScreenOpen, setIsAuthScreenOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autostart') === '1') return false;
+      if (params.get('auth') === '1') return true;
+    }
+    return !StorageService.getAuthSession();
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
@@ -73,16 +99,24 @@ export default function App() {
   // Domain states
   const [profile, setProfile] = useState<UserProfile>(StorageService.getProfile());
   const [goal, setGoal] = useState<PhysicalGoal>(StorageService.getGoal());
-  const [nutritionTarget, setNutritionTarget] = useState<NutritionTarget>(StorageService.getNutritionTarget());
+  const [nutritionTarget, setNutritionTarget] = useState<NutritionTarget>(
+    StorageService.getNutritionTarget()
+  );
   const [foods, setFoods] = useState<Food[]>(StorageService.getFoods());
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>(StorageService.getFoodLogs());
   const [weighIns, setWeighIns] = useState<WeighIn[]>(StorageService.getWeighIns());
-  const [measurements, setMeasurements] = useState<BodyMeasurement[]>(StorageService.getBodyMeasurements());
+  const [measurements, setMeasurements] = useState<BodyMeasurement[]>(
+    StorageService.getBodyMeasurements()
+  );
   const [exercises, setExercises] = useState<Exercise[]>(StorageService.getExercises());
   const [routines, setRoutines] = useState<WorkoutRoutine[]>(StorageService.getRoutines());
   const [sessions, setSessions] = useState<WorkoutSession[]>(StorageService.getWorkoutSessions());
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(StorageService.getActivityLogs());
-  const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>(StorageService.getRecoveryLogs());
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>(
+    StorageService.getActivityLogs()
+  );
+  const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>(
+    StorageService.getRecoveryLogs()
+  );
   const [photos, setPhotos] = useState<ProgressPhoto[]>(StorageService.getProgressPhotos());
   const [reviews, setReviews] = useState<WeeklyReview[]>(StorageService.getWeeklyReviews());
   const [habits, setHabits] = useState<DailyHabits>(StorageService.getHabits(currentDate));
@@ -103,12 +137,33 @@ export default function App() {
 
   const [isActiveWorkoutModalOpen, setIsActiveWorkoutModalOpen] = useState<boolean>(false);
   const [editingSession, setEditingSession] = useState<WorkoutSession | null>(null);
+  const [activeWorkoutRoutineId, setActiveWorkoutRoutineId] = useState<string | undefined>(
+    undefined
+  );
 
   const [isPhotoUploadTriggered, setIsPhotoUploadTriggered] = useState<boolean>(false);
   const [isMobileMoreOpen, setIsMobileMoreOpen] = useState<boolean>(false);
 
+  // Sync theme classes on documentElement and body so all portals, modals, and screens get high-contrast theme rules
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    if (theme === 'light') {
+      root.classList.add('theme-light');
+      root.classList.remove('theme-dark');
+      body.classList.add('theme-light');
+      body.classList.remove('theme-dark');
+    } else {
+      root.classList.add('theme-dark');
+      root.classList.remove('theme-light');
+      body.classList.add('theme-dark');
+      body.classList.remove('theme-light');
+    }
+  }, [theme]);
+
   // Reload all tenant-isolated domain states
   const reloadTenantState = () => {
+    setWorkspaceMode(StorageService.getWorkspaceMode());
     setProfile(StorageService.getProfile());
     setGoal(StorageService.getGoal());
     setNutritionTarget(StorageService.getNutritionTarget());
@@ -137,13 +192,67 @@ export default function App() {
     analytics.track('module_visited', tab);
   };
 
-  // Handle Auth Success
+  // Initialize workspace with either 'demo' ("Datos de Prueba") or 'zero' ("Empezar de 0 + Onboarding en Grande")
+  const handleStartWithWorkspaceMode = (
+    mode: WorkspaceInitMode,
+    userOverrides?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      role?: 'admin' | 'user';
+      token?: string;
+    }
+  ) => {
+    const newSession = StorageService.initializeWorkspaceMode(mode, userOverrides);
+    setAuthSession(newSession);
+    setWorkspaceMode(mode);
+    analytics.setUserId(newSession.user.id);
+    reloadTenantState();
+    setIsAuthScreenOpen(false);
+    setIsAuthModalOpen(false);
+
+    if (mode === 'zero') {
+      // Clear unit/goal in initial props so the Full-Screen Onboarding Wizard guides & validates selection from 0
+      setProfile((prev) => ({
+        ...prev,
+        name: newSession.user.name || 'Santiago Quinteros',
+        unit_system: undefined as any,
+      }));
+      setGoal((prev) => ({
+        ...prev,
+        primary_goal: undefined as any,
+      }));
+      setIsOnboardingOpen(true);
+    } else {
+      setIsOnboardingOpen(false);
+      try {
+        confetti({ particleCount: 55, spread: 60, origin: { y: 0.6 } });
+      } catch (e) {}
+    }
+  };
+
+  // Handle Auth Session from API Login / Register with selected workspace mode
+  const handleAuthScreenSessionSuccess = (
+    session: AuthSession,
+    mode: WorkspaceInitMode = 'demo'
+  ) => {
+    handleStartWithWorkspaceMode(mode, {
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      role: session.user.role,
+      token: session.token,
+    });
+  };
+
+  // Handle Auth Success from modal
   const handleAuthSuccess = (session: AuthSession) => {
     StorageService.setAuthSession(session);
     setAuthSession(session);
     analytics.setUserId(session.user.id);
     reloadTenantState();
     setIsAuthModalOpen(false);
+    setIsAuthScreenOpen(false);
     analytics.track('auth_login_success', 'auth', { role: session.user.role });
 
     if (!session.user.onboarding_completed) {
@@ -151,7 +260,7 @@ export default function App() {
     }
   };
 
-  // Handle Logout
+  // Handle Logout -> returns to Full-Screen Log In / Sign Up Screen
   const handleLogout = async () => {
     if (authSession?.token) {
       try {
@@ -168,6 +277,7 @@ export default function App() {
     if (currentTab === 'admin') {
       setCurrentTab('dashboard');
     }
+    setIsAuthScreenOpen(true);
   };
 
   // Handle Onboarding Completion
@@ -189,6 +299,7 @@ export default function App() {
         protein_g: quickStartResult.recommendedProteinG,
         carbohydrates_g: quickStartResult.recommendedCarbsG,
         fat_g: quickStartResult.recommendedFatG,
+        calculated_at: currentDate,
       };
       StorageService.updateNutritionTarget(updatedTarget);
       setNutritionTarget(updatedTarget);
@@ -314,7 +425,9 @@ export default function App() {
   const handleBatchImportFoodLogs = (logs: FoodLog[], provider: string) => {
     const startTime = Date.now();
     const result = StorageService.batchImportFoodLogs(logs);
-    const provKey = (provider === 'fitia' ? 'fitia' : 'myfitnesspal') as 'fitia' | 'myfitnesspal';
+    const provKey = (provider === 'fitia' ? 'fitia' : 'myfitnesspal') as
+      | 'fitia'
+      | 'myfitnesspal';
     const provName = provKey === 'fitia' ? 'Fitia Nutrición' : 'MyFitnessPal';
 
     StorageService.addSyncLog({
@@ -353,7 +466,9 @@ export default function App() {
     h.workout_done = true;
     StorageService.saveHabits(h);
     if (dateStr === currentDate) setHabits({ ...h });
-    analytics.track('workout_logged', 'workout', { exercises_count: session.exercises.length });
+    analytics.track('workout_logged', 'workout', {
+      exercises_count: session.exercises.length,
+    });
     try {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
     } catch (e) {}
@@ -413,6 +528,7 @@ export default function App() {
       ...nutritionTarget,
       calories_kcal: newCalories,
       carbohydrates_g: Math.round((newCalories - (180 * 4 + 70 * 9)) / 4),
+      calculated_at: currentDate,
     };
     StorageService.updateNutritionTarget(updatedTarget);
     setNutritionTarget(updatedTarget);
@@ -433,7 +549,9 @@ export default function App() {
   };
 
   // Quick Action selection router
-  const handleSelectQuickAction = (action: 'weigh_in' | 'food_log' | 'workout' | 'steps' | 'photo') => {
+  const handleSelectQuickAction = (
+    action: 'weigh_in' | 'food_log' | 'workout' | 'steps' | 'photo'
+  ) => {
     if (action === 'weigh_in') {
       setEditingWeighIn(null);
       setIsWeighInModalOpen(true);
@@ -442,6 +560,7 @@ export default function App() {
       setIsFoodLogModalOpen(true);
     } else if (action === 'workout') {
       setEditingSession(null);
+      setActiveWorkoutRoutineId(undefined);
       setIsActiveWorkoutModalOpen(true);
     } else if (action === 'steps') {
       handleSelectTab('activity');
@@ -454,10 +573,30 @@ export default function App() {
   const streakDays = calculateLoggingStreak(weighIns, foodLogs, currentDate);
   const isAdmin = authSession?.user.role === 'admin';
 
+  // If the Full-Screen Auth Screen is open and Onboarding isn't active on top of it, render AuthScreen full-viewport
+  if (isAuthScreenOpen && !isOnboardingOpen) {
+    return (
+      <div className={theme === 'light' ? 'theme-light' : 'theme-dark'}>
+        <AuthScreen
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onStartWithMode={handleStartWithWorkspaceMode}
+          onAuthSessionSuccess={handleAuthScreenSessionSuccess}
+          onCloseToDashboard={() => setIsAuthScreenOpen(false)}
+          defaultUserName={authSession?.user.name || profile.name || 'Santiago Quinteros'}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors ${
-      theme === 'dark' ? 'bg-zinc-950 text-zinc-100' : 'bg-zinc-50 text-zinc-900'
-    }`}>
+    <div
+      className={`min-h-screen flex flex-col font-sans transition-colors ${
+        theme === 'dark'
+          ? 'theme-dark bg-zinc-950 text-zinc-100'
+          : 'theme-light bg-zinc-50 text-zinc-900'
+      }`}
+    >
       {/* Top Navigation */}
       <Navbar
         currentDate={currentDate}
@@ -467,7 +606,7 @@ export default function App() {
         onToggleTheme={handleToggleTheme}
         currentUser={authSession?.user || null}
         onOpenFeedback={() => setIsFeedbackModalOpen(true)}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={() => setIsAuthScreenOpen(true)}
         onLogout={handleLogout}
       />
 
@@ -484,72 +623,98 @@ export default function App() {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Private Beta Control Strip & Personalized Welcome */}
-            <div className="rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-950/30 border border-zinc-800/90 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div className="rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-emerald-950/30 border border-zinc-800/90 px-4 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3 flex-wrap">
-                <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5" /> Beta Privada v2.4
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  {workspaceMode === 'zero' ? 'Cuenta desde 0' : 'Datos de Prueba Activos'}
                 </span>
                 <p className="text-xs text-zinc-200" data-testid="app-welcome-greeting">
                   <strong className="text-emerald-400 font-bold">
                     ¡Bienvenido, {authSession?.user.name || profile.name || 'Santiago Quinteros'}!
                   </strong>{' '}
                   <span className="text-zinc-500">·</span>{' '}
-                  {authSession ? (
-                    <>
-                      Sesión aislada ({authSession.user.email}) · Tenant{' '}
-                      <code className="text-emerald-400 font-mono">bt_{authSession.user.id}_*</code>
-                    </>
-                  ) : (
-                    <>
-                      Unidad: <strong className="text-white">{profile.unit_system === 'imperial' ? 'lb / in' : 'kg / cm'}</strong> · Objetivo:{' '}
-                      <strong className="text-white">
-                        {goal.primary_goal === 'fat_loss'
-                          ? 'Pérdida de Grasa'
-                          : goal.primary_goal === 'muscle_gain'
-                          ? 'Ganancia Muscular'
-                          : goal.primary_goal === 'maintenance'
-                          ? 'Mantenimiento'
-                          : 'Recomposición Corporal'}
-                      </strong>
-                    </>
-                  )}
+                  Unidad:{' '}
+                  <strong className="text-white">
+                    {profile.unit_system === 'imperial' ? 'lb / in' : 'kg / cm'}
+                  </strong>{' '}
+                  · Objetivo:{' '}
+                  <strong className="text-white">
+                    {goal.primary_goal === 'fat_loss'
+                      ? 'Pérdida de Grasa'
+                      : goal.primary_goal === 'muscle_gain'
+                      ? 'Aumento de Masa Muscular'
+                      : goal.primary_goal === 'maintenance'
+                      ? 'Mantenimiento'
+                      : 'Recomposición Corporal'}
+                  </strong>
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
+                  data-testid="open-fullscreen-auth-btn"
+                  onClick={() => setIsAuthScreenOpen(true)}
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Pantalla Log In / Sign Up</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="reset-to-zero-onboarding-btn"
+                  onClick={() =>
+                    handleStartWithWorkspaceMode('zero', {
+                      name: authSession?.user.name || profile.name || 'Santiago Quinteros',
+                    })
+                  }
+                  className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Empezar de 0 + Onboarding en Grande</span>
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="restore-demo-data-btn"
+                  onClick={() =>
+                    handleStartWithWorkspaceMode('demo', {
+                      name: authSession?.user.name || profile.name || 'Santiago Quinteros',
+                    })
+                  }
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Database className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Poner Datos de Prueba</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setIsOnboardingOpen(true)}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Compass className="w-3.5 h-3.5 text-emerald-400" />
-                  Onboarding / Privacidad
+                  <span>Onboarding</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setIsFeedbackModalOpen(true)}
-                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium flex items-center gap-1.5 transition-colors"
+                  className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <MessageSquarePlus className="w-3.5 h-3.5 text-teal-400" />
-                  Enviar Feedback
+                  <span>Feedback</span>
                 </button>
+
                 {isAdmin && currentTab !== 'admin' && (
                   <button
                     type="button"
                     onClick={() => handleSelectTab('admin')}
-                    className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
+                    className="px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    Panel Admin Beta
-                  </button>
-                )}
-                {!authSession && (
-                  <button
-                    type="button"
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                  >
-                    <KeyRound className="w-3.5 h-3.5" />
-                    Acceso / Invitación
+                    <span>Panel Admin Beta</span>
                   </button>
                 )}
               </div>
@@ -629,6 +794,7 @@ export default function App() {
                 }}
                 onDeleteFoodLog={handleDeleteFoodLog}
                 onOpenCreateCustomFood={() => setIsCustomFoodModalOpen(true)}
+                onQuickAddFoodLog={handleSaveFoodLog}
                 onImportFoodLogs={handleBatchImportFoodLogs}
               />
             )}
@@ -638,12 +804,14 @@ export default function App() {
                 routines={routines}
                 exercises={exercises}
                 sessions={sessions}
-                onStartSession={() => {
+                onStartSession={(routineId) => {
                   setEditingSession(null);
+                  setActiveWorkoutRoutineId(routineId);
                   setIsActiveWorkoutModalOpen(true);
                 }}
                 onEditSession={(sess) => {
                   setEditingSession(sess);
+                  setActiveWorkoutRoutineId(sess.routine_id);
                   setIsActiveWorkoutModalOpen(true);
                 }}
                 onDeleteSession={handleDeleteWorkoutSession}
@@ -826,6 +994,7 @@ export default function App() {
         initialLog={editingFoodLog}
         defaultDate={currentDate}
         defaultMealType={foodLogDefaultMeal}
+        onFoodsChange={() => setFoods(StorageService.getFoods())}
       />
 
       {/* Custom Food Creation Modal */}
@@ -841,11 +1010,14 @@ export default function App() {
         onClose={() => {
           setIsActiveWorkoutModalOpen(false);
           setEditingSession(null);
+          setActiveWorkoutRoutineId(undefined);
         }}
         onSaveSession={handleSaveWorkoutSession}
         routines={routines}
         exercisesCatalog={exercises}
+        previousSessions={sessions}
         initialSession={editingSession}
+        initialRoutineId={activeWorkoutRoutineId}
       />
 
       {/* Private Beta Auth Modal */}
@@ -855,7 +1027,7 @@ export default function App() {
         onAuthSuccess={handleAuthSuccess}
       />
 
-      {/* Private Beta Onboarding Wizard */}
+      {/* Full-Screen Onboarding Wizard ("Onboarding en Grande") */}
       <OnboardingWizard
         isOpen={isOnboardingOpen}
         userEmail={authSession?.user.email}
@@ -863,6 +1035,10 @@ export default function App() {
         initialGoal={goal}
         onComplete={handleOnboardingComplete}
         onClose={() => setIsOnboardingOpen(false)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        workspaceMode={workspaceMode}
+        onSwitchToDemoMode={() => handleStartWithWorkspaceMode('demo')}
       />
 
       {/* Integrated Beta Feedback Modal */}

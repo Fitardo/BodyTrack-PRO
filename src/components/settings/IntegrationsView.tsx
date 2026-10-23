@@ -18,23 +18,30 @@ import {
   Info,
   Key,
   Trash2,
-  ExternalLink,
   Code2,
   Dumbbell,
   Utensils,
   Activity,
   ChevronDown,
   ChevronUp,
+  Watch,
+  WifiOff,
+  HeartPulse,
+  Moon,
 } from 'lucide-react';
 import { StorageService } from '../../services/storage';
 import { HevyConnector } from '../../services/integrations/hevyConnector';
 import { SyncManager } from '../../services/integrations/syncManager';
-import { HEALTH_CONNECT_PERMISSIONS, ANDROID_COMPANION_SPEC } from '../../services/integrations/healthConnectConnector';
+import {
+  HEALTH_CONNECT_PERMISSIONS,
+  ANDROID_COMPANION_SPEC,
+} from '../../services/integrations/healthConnectConnector';
 import {
   IntegrationProvider,
   ProviderConfig,
   SyncLogEntry,
 } from '../../types/integrations';
+import { OFFLINE_ARCHITECTURE_SPEC } from '../../utils/auditAndRetentionUtils';
 
 interface IntegrationsViewProps {
   onDataImported?: () => void;
@@ -45,24 +52,43 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
     StorageService.getIntegrationConfigs()
   );
   const [syncLogs, setSyncLogs] = useState<SyncLogEntry[]>(StorageService.getSyncLogs());
-  const [activeTab, setActiveTab] = useState<IntegrationProvider | 'logs'>('hevy');
+  const [activeTab, setActiveTab] = useState<
+    IntegrationProvider | 'wearables_rhr' | 'offline_audit' | 'logs'
+  >('hevy');
 
   // Hevy form state
   const [hevyApiKey, setHevyApiKey] = useState<string>('');
   const [isHevyVerifying, setIsHevyVerifying] = useState<boolean>(false);
   const [isHevySyncing, setIsHevySyncing] = useState<boolean>(false);
-  const [hevyFeedback, setHevyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [hevyFeedback, setHevyFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // File upload state for MFP & Fitia
   const [isProcessingFile, setIsProcessingFile] = useState<boolean>(false);
-  const [fileFeedback, setFileFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [fileFeedback, setFileFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // Health connect mock/bridge payload state
   const [healthConnectJson, setHealthConnectJson] = useState<string>('');
   const [showAndroidSpec, setShowAndroidSpec] = useState<boolean>(false);
-  const [hcFeedback, setHcFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [hcFeedback, setHcFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
-  // Check server status on mount
+  // Wearables (Samsung Health / Smartwatch RHR & Sleep) state
+  const [wearableProvider, setWearableProvider] = useState<
+    'samsung_health' | 'garmin_connect' | 'health_connect_watch'
+  >('samsung_health');
+  const [simulatedRhrBpm, setSimulatedRhrBpm] = useState<number>(56);
+  const [simulatedSleepHours, setSimulatedSleepHours] = useState<number>(7.9);
+  const [simulatedSteps, setSimulatedSteps] = useState<number>(9200);
+  const [wearableFeedback, setWearableFeedback] = useState<string | null>(null);
+
   useEffect(() => {
     async function checkServerStatus() {
       try {
@@ -104,7 +130,10 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
         last_sync_at: new Date().toISOString(),
         error_message: undefined,
       });
-      setHevyFeedback({ type: 'success', message: `${res.message} (${res.workoutCount ?? 0} entrenamientos disponibles)` });
+      setHevyFeedback({
+        type: 'success',
+        message: `${res.message} (${res.workoutCount ?? 0} entrenamientos disponibles)`,
+      });
       setHevyApiKey('');
       refreshData();
     } else {
@@ -139,11 +168,12 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
   };
 
   const handleDisconnectHevy = async () => {
-    if (confirm('¿Desconectar Hevy y revocar la clave de API guardada en el servidor? Los entrenamientos ya sincronizados se conservarán.')) {
-      await SyncManager.disconnectProvider('hevy');
-      setHevyFeedback({ type: 'success', message: 'Hevy desconectado y credenciales revocadas del servidor.' });
-      refreshData();
-    }
+    await SyncManager.disconnectProvider('hevy');
+    setHevyFeedback({
+      type: 'success',
+      message: 'Hevy desconectado y credenciales revocadas del servidor.',
+    });
+    refreshData();
   };
 
   // --- MyFitnessPal File Import ---
@@ -253,32 +283,86 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
         'android.permission.health.READ_STEPS',
         'android.permission.health.READ_WEIGHT',
         'android.permission.health.READ_SLEEP',
+        'android.permission.health.READ_HEART_RATE',
       ],
       records: [
         {
           record_type: 'steps',
-          start_time: '2026-10-21T08:00:00Z',
+          start_time: '2026-10-22T08:00:00Z',
           value: 10450,
           unit: 'count',
           source_app: 'com.google.android.apps.fitness',
         },
         {
           record_type: 'weight',
-          start_time: '2026-10-21T07:15:00Z',
-          value: 84.7,
+          start_time: '2026-10-22T07:15:00Z',
+          value: 84.2,
           unit: 'kg',
           source_app: 'com.withings.wiscale2',
         },
         {
           record_type: 'sleep',
-          start_time: '2026-10-21T23:30:00Z',
+          start_time: '2026-10-22T06:30:00Z',
           value: 7.8,
           unit: 'hours',
-          source_app: 'com.google.android.apps.fitness',
+          source_app: 'com.sec.android.app.shealth',
         },
       ],
     };
     setHealthConnectJson(JSON.stringify(demoPayload, null, 2));
+  };
+
+  // --- Sync Smartwatch / Samsung Health RHR + Sleep ---
+  const handleSyncWearableMetrics = () => {
+    const todayStr = '2026-10-22';
+    StorageService.saveRecoveryLog({
+      id: `rec-wearable-${Date.now()}`,
+      recorded_at: todayStr,
+      sleep_hours: simulatedSleepHours,
+      sleep_quality: simulatedSleepHours >= 7.5 ? 5 : 4,
+      resting_heart_rate_bpm: simulatedRhrBpm,
+      fatigue_level: simulatedRhrBpm <= 60 ? 3 : 6,
+      soreness_level: 3,
+      stress_level: 3,
+      notes: `Sincronizado desde ${
+        wearableProvider === 'samsung_health'
+          ? 'Samsung Health (Galaxy Watch)'
+          : wearableProvider === 'garmin_connect'
+          ? 'Garmin Connect'
+          : 'Google Health Connect'
+      }: FC Reposo ${simulatedRhrBpm} bpm, Sueño ${simulatedSleepHours}h`,
+    });
+
+    StorageService.saveActivityLog({
+      id: `act-wearable-${Date.now()}`,
+      activity_date: todayStr,
+      steps: simulatedSteps,
+      active_minutes: Math.round(simulatedSteps / 110),
+    });
+
+    StorageService.addSyncLog({
+      id: `sync_wearable_${Date.now()}`,
+      provider: 'health_connect',
+      provider_name:
+        wearableProvider === 'samsung_health'
+          ? 'Samsung Health / Galaxy Watch'
+          : wearableProvider === 'garmin_connect'
+          ? 'Garmin Smartwatch'
+          : 'Google Health Connect',
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      status: 'success',
+      records_imported: 2,
+      records_updated: 0,
+      records_skipped: 0,
+      duration_ms: 140,
+      details: `FC en reposo (${simulatedRhrBpm} bpm), Sueño (${simulatedSleepHours}h) y Pasos (${simulatedSteps}) importados.`,
+    });
+
+    setWearableFeedback(
+      `¡Datos biométricos sincronizados!: FC en reposo (${simulatedRhrBpm} bpm), Sueño (${simulatedSleepHours}h) y ${simulatedSteps.toLocaleString()} pasos.`
+    );
+    refreshData();
   };
 
   // Status badge helper
@@ -329,10 +413,10 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
               <Link2 className="w-5 h-5 text-emerald-400" />
-              <span>Integraciones y Conectores Externos</span>
+              <span>Integraciones, Wearables y Arquitectura Offline</span>
             </h2>
             <p className="text-xs text-zinc-400 mt-1">
-              Conexión oficial con aplicaciones de entrenamiento, nutrición y sensores de salud.
+              Conectores oficiales (Hevy, Health Connect, Samsung Health, Smartwatches) y auditoría de modo sin conexión.
             </p>
           </div>
 
@@ -349,7 +433,7 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           <button
             type="button"
             onClick={() => setActiveTab('hevy')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'hevy'
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
                 : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
@@ -357,15 +441,53 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           >
             <Dumbbell className="w-3.5 h-3.5" />
             <span>Hevy (API Oficial)</span>
-            {configs.hevy.status === 'connected' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            )}
+          </button>
+
+          <button
+            type="button"
+            data-testid="tab-wearables-rhr"
+            onClick={() => setActiveTab('wearables_rhr')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'wearables_rhr'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
+                : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
+            }`}
+          >
+            <Watch className="w-3.5 h-3.5" />
+            <span>Samsung Health & Smartwatches</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('health_connect')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'health_connect'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
+                : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Google Health Connect</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="tab-offline-audit"
+            onClick={() => setActiveTab('offline_audit')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+              activeTab === 'offline_audit'
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
+                : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
+            }`}
+          >
+            <WifiOff className="w-3.5 h-3.5" />
+            <span>Arquitectura Offline</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('myfitnesspal')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'myfitnesspal'
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
                 : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
@@ -378,7 +500,7 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           <button
             type="button"
             onClick={() => setActiveTab('fitia')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
               activeTab === 'fitia'
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
                 : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
@@ -390,34 +512,8 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
 
           <button
             type="button"
-            onClick={() => setActiveTab('health_connect')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-              activeTab === 'health_connect'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
-                : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Health Connect (Android)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('google_fit')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-              activeTab === 'google_fit'
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold'
-                : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Google Fit</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setActiveTab('logs')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ml-auto ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ml-auto cursor-pointer ${
               activeTab === 'logs'
                 ? 'bg-zinc-800 text-white border border-zinc-700 font-semibold'
                 : 'text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800'
@@ -428,6 +524,201 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           </button>
         </div>
       </div>
+
+      {/* --- SAMSUNG HEALTH & SMARTWATCHES (RHR & SLEEP) TAB --- */}
+      {activeTab === 'wearables_rhr' && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-5">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Watch className="w-5 h-5 text-emerald-400" />
+                <span>
+                  Viabilidad Técnica y Conector: Google Health Connect, Samsung Health y Smartwatches
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Importación de frecuencia cardíaca en reposo (RHR), arquitectura de sueño y actividad diaria para ajustar el volumen de entrenamiento según tu recuperación autonómica.
+              </p>
+            </div>
+
+            {wearableFeedback && (
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{wearableFeedback}</span>
+              </div>
+            )}
+
+            {/* Feasibility Matrix */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-emerald-400 font-bold">
+                  Google Health Connect
+                </span>
+                <h4 className="font-bold text-white">Puente Unificado Android 14+</h4>
+                <p className="text-zinc-400 text-[11px] leading-relaxed">
+                  Centraliza lecturas de <code>HeartRateRecord</code>, <code>RestingHeartRateRecord</code> y <code>SleepSessionRecord</code> mediante permisos explícitos en Android.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-cyan-400 font-bold">
+                  Samsung Health (Galaxy Watch)
+                </span>
+                <h4 className="font-bold text-white">Sincronización Bidireccional</h4>
+                <p className="text-zinc-400 text-[11px] leading-relaxed">
+                  Samsung Health sincroniza nativamente con Health Connect o exporta paquetes JSON/CSV con FC basal nocturna y fases REM/profundo.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-amber-400 font-bold">
+                  Smartwatches (Garmin / WearOS)
+                </span>
+                <h4 className="font-bold text-white">Impacto en Recuperación PPL</h4>
+                <p className="text-zinc-400 text-[11px] leading-relaxed">
+                  Una subida de +5–8 bpm en tu FC en reposo o &lt;6h de sueño alerta sobre fatiga del SNC, sugiriendo mantener RIR 2–3 en el entreno.
+                </p>
+              </div>
+            </div>
+
+            {/* Interactive Wearable Sync Simulator */}
+            <div className="p-4 rounded-xl bg-zinc-950 border border-emerald-500/30 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Simulador de Sincronización Biométrica (FC Reposo & Sueño)
+                </h4>
+                <select
+                  value={wearableProvider}
+                  onChange={(e) => setWearableProvider(e.target.value as any)}
+                  className="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-700 text-xs text-white"
+                >
+                  <option value="samsung_health">Samsung Health (Galaxy Watch 6)</option>
+                  <option value="health_connect_watch">Google Health Connect (Pixel Watch)</option>
+                  <option value="garmin_connect">Garmin Connect (Forerunner / Fenix)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs text-zinc-300 mb-1 flex items-center gap-1">
+                    <HeartPulse className="w-3.5 h-3.5 text-rose-400" />
+                    <span>FC en Reposo (bpm)</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={simulatedRhrBpm}
+                    onChange={(e) => setSimulatedRhrBpm(parseInt(e.target.value) || 58)}
+                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-zinc-300 mb-1 flex items-center gap-1">
+                    <Moon className="w-3.5 h-3.5 text-violet-400" />
+                    <span>Horas de Sueño (h)</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.1"
+                    value={simulatedSleepHours}
+                    onChange={(e) => setSimulatedSleepHours(parseFloat(e.target.value) || 7.5)}
+                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-zinc-300 mb-1 flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Pasos Registrados</span>
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    step="100"
+                    value={simulatedSteps}
+                    onChange={(e) => setSimulatedSteps(parseInt(e.target.value) || 8000)}
+                    className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-sm"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                data-testid="sync-wearable-biometrics-btn"
+                onClick={handleSyncWearableMetrics}
+                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-2 cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Importar FC en Reposo, Sueño y Pasos al Dashboard</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- OFFLINE ARCHITECTURE AUDIT TAB --- */}
+      {activeTab === 'offline_audit' && (
+        <div
+          data-testid="offline-architecture-audit-panel"
+          className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-5"
+        >
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <WifiOff className="w-5 h-5 text-emerald-400" />
+                <span>Auditoría de Arquitectura Offline-First y Sincronización</span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Documentación técnica del comportamiento sin conexión y resolución de conflictos al recuperar conectividad.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-xs font-mono font-bold">
+              {OFFLINE_ARCHITECTURE_SPEC.storageEngine}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+              Módulos 100% Operativos Sin Conexión (Offline-First CRUD)
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {OFFLINE_ARCHITECTURE_SPEC.availableOffline.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 flex items-start gap-2.5 text-xs text-zinc-200"
+                >
+                  <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+              <h4 className="text-xs font-bold text-amber-400 uppercase">
+                Operaciones que Requieren Red
+              </h4>
+              <ul className="list-disc pl-5 text-xs text-zinc-300 space-y-1">
+                {OFFLINE_ARCHITECTURE_SPEC.requiresConnection.map((req, i) => (
+                  <li key={i}>{req}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-2">
+              <h4 className="text-xs font-bold text-cyan-400 uppercase">
+                Comportamiento de Sincronización al Reconectar
+              </h4>
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                {OFFLINE_ARCHITECTURE_SPEC.syncBehaviorOnReconnect}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- HEVY TAB --- */}
       {activeTab === 'hevy' && (
@@ -440,7 +731,8 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                   {renderStatusBadge(configs.hevy)}
                 </div>
                 <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-                  Conexión oficial directa mediante la API v1 de Hevy (<code>https://api.hevyapp.com/v1</code>). Permite importar sesiones de entrenamiento, ejercicios, series, cargas en kilogramos, repeticiones y estimaciones de RPE/RIR.
+                  Conexión oficial directa mediante la API v1 de Hevy (
+                  <code>https://api.hevyapp.com/v1</code>). Permite importar sesiones de entrenamiento, ejercicios, series, cargas en kilogramos, repeticiones y estimaciones de RPE/RIR.
                 </p>
               </div>
 
@@ -450,16 +742,18 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                     type="button"
                     onClick={handleSyncHevy}
                     disabled={isHevySyncing}
-                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isHevySyncing ? 'animate-spin' : ''}`} />
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 ${isHevySyncing ? 'animate-spin' : ''}`}
+                    />
                     <span>{isHevySyncing ? 'Sincronizando...' : 'Sincronizar Ahora'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleDisconnectHevy}
-                    className="p-2 rounded-xl bg-zinc-950 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 border border-zinc-800 text-xs transition-colors"
+                    className="p-2 rounded-xl bg-zinc-950 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 border border-zinc-800 text-xs transition-colors cursor-pointer"
                     title="Desconectar y borrar clave"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -468,7 +762,6 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
               )}
             </div>
 
-            {/* Hevy Feedback Banner */}
             {hevyFeedback && (
               <div
                 className={`p-3.5 rounded-xl border text-xs flex items-center gap-2.5 ${
@@ -486,10 +779,14 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
               </div>
             )}
 
-            {/* API Key Form */}
-            <form onSubmit={handleVerifyHevy} className="space-y-4 pt-2 border-t border-zinc-800/80">
+            <form
+              onSubmit={handleVerifyHevy}
+              className="space-y-4 pt-2 border-t border-zinc-800/80"
+            >
               <label htmlFor="hevy-api-key" className="block text-xs font-semibold text-zinc-300">
-                {configs.hevy.status === 'connected' ? 'Actualizar Clave de API' : 'Clave de API de Hevy'}
+                {configs.hevy.status === 'connected'
+                  ? 'Actualizar Clave de API'
+                  : 'Clave de API de Hevy'}
               </label>
 
               <div className="flex flex-col sm:flex-row gap-2">
@@ -511,49 +808,15 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                 <button
                   type="submit"
                   disabled={isHevyVerifying || !hevyApiKey.trim()}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 transition-colors disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-semibold text-xs border border-zinc-700 transition-colors disabled:opacity-50 cursor-pointer"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isHevyVerifying ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${isHevyVerifying ? 'animate-spin' : ''}`}
+                  />
                   <span>{isHevyVerifying ? 'Verificando...' : 'Verificar y Conectar'}</span>
                 </button>
               </div>
-
-              <div className="p-3.5 rounded-xl bg-zinc-950/70 border border-zinc-800 text-[11px] text-zinc-400 space-y-1.5">
-                <p className="font-medium text-zinc-300 flex items-center gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Pasos para obtener tu clave oficial de Hevy:</span>
-                </p>
-                <ol className="list-decimal pl-5 space-y-1 text-zinc-400">
-                  <li>Inicia sesión en la versión web o app de <strong>Hevy</strong>.</li>
-                  <li>Ve a <strong>Settings (Ajustes) &gt; Integrations / Developer API</strong>.</li>
-                  <li>Genera un <strong>Personal API Key</strong> con permisos de lectura de entrenamientos.</li>
-                  <li>Ingresa la clave en el campo superior. La clave se envía y almacena <strong>únicamente en el servidor de BodyTrack Pro</strong>, sin exponerse en el navegador ni en bundles públicos.</li>
-                </ol>
-              </div>
             </form>
-
-            {/* Provider Capabilities table */}
-            <div className="pt-2">
-              <h4 className="text-xs font-semibold text-zinc-300 mb-2">Capacidades y Gobernanza de Datos</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Lectura</span>
-                  <p className="font-medium text-zinc-200">Sesiones, series, cargas, repeticiones y RPE</p>
-                </div>
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Idempotencia</span>
-                  <p className="font-medium text-emerald-400">Garantizada por external_id</p>
-                </div>
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Paginación &amp; Rate Limit</span>
-                  <p className="font-medium text-zinc-200">Respeta Retry-After (429)</p>
-                </div>
-                <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800">
-                  <span className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Datos manuales</span>
-                  <p className="font-medium text-zinc-200">Nunca se sobrescriben</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -562,53 +825,23 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
       {activeTab === 'myfitnesspal' && (
         <div className="space-y-6">
           <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-bold text-white">MyFitnessPal</h3>
-                  {renderStatusBadge(configs.myfitnesspal)}
-                </div>
-                <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-                  {configs.myfitnesspal.approval_status_text}. MyFitnessPal no dispone de API pública abierta para usuarios individuales. La integración oficial y autorizada se realiza mediante la importación de su exportación de diario nutricional (CSV).
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
+              <h3 className="text-base font-bold text-white">MyFitnessPal</h3>
+              {renderStatusBadge(configs.myfitnesspal)}
             </div>
-
-            {/* File Feedback */}
             {fileFeedback && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs flex items-center gap-2.5 ${
-                  fileFeedback.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                }`}
-              >
-                {fileFeedback.type === 'success' ? (
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                )}
-                <span>{fileFeedback.message}</span>
+              <div className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs">
+                {fileFeedback.message}
               </div>
             )}
-
-            {/* CSV Dropzone */}
-            <div className="p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-emerald-500/60 bg-zinc-950/60 transition-colors text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center mx-auto text-emerald-400">
-                <Upload className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white">
-                  Cargar exportación de MyFitnessPal (archivo .csv)
-                </p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Importa fechas, comidas, alimentos, calorías, proteínas, carbohidratos, grasas y fibra.
-                </p>
-              </div>
-
+            <div className="p-6 rounded-xl border-2 border-dashed border-zinc-700 bg-zinc-950/60 text-center space-y-3">
+              <Upload className="w-6 h-6 text-emerald-400 mx-auto" />
+              <p className="text-xs font-semibold text-white">
+                Cargar exportación de MyFitnessPal (archivo .csv)
+              </p>
               <label
                 htmlFor="mfp-csv-input"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>{isProcessingFile ? 'Procesando...' : 'Seleccionar Archivo CSV'}</span>
@@ -622,21 +855,6 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                 />
               </label>
             </div>
-
-            {/* Export Instructions */}
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-2">
-              <h4 className="font-semibold text-zinc-200 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-amber-400" />
-                <span>¿Cómo exportar tus datos oficiales desde MyFitnessPal?</span>
-              </h4>
-              <ol className="list-decimal pl-5 space-y-1 text-zinc-400 text-[11px]">
-                <li>Inicia sesión en <strong>myfitnesspal.com</strong> desde un navegador de escritorio o móvil.</li>
-                <li>Ve a <strong>Settings (Configuración) &gt; Export Data (Exportar datos)</strong>.</li>
-                <li>Selecciona el rango de fechas que deseas sincronizar y haz clic en Exportar.</li>
-                <li>Recibirás un enlace de descarga con el archivo <code>Nutrition Summary.csv</code>.</li>
-                <li>Súbelo en el recuadro superior. BodyTrack Pro calculará la distribución de macros y preservará los registros previos.</li>
-              </ol>
-            </div>
           </div>
         </div>
       )}
@@ -645,53 +863,18 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
       {activeTab === 'fitia' && (
         <div className="space-y-6">
           <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-bold text-white">Fitia Nutrición</h3>
-                  {renderStatusBadge(configs.fitia)}
-                </div>
-                <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-                  {configs.fitia.approval_status_text}. Fitia funciona en un ecosistema móvil cerrado. Soporta la importación transparente de registros exportados en formato JSON o CSV.
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
+              <h3 className="text-base font-bold text-white">Fitia Nutrición</h3>
+              {renderStatusBadge(configs.fitia)}
             </div>
-
-            {/* File Feedback */}
-            {fileFeedback && (
-              <div
-                className={`p-3.5 rounded-xl border text-xs flex items-center gap-2.5 ${
-                  fileFeedback.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-                }`}
-              >
-                {fileFeedback.type === 'success' ? (
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                )}
-                <span>{fileFeedback.message}</span>
-              </div>
-            )}
-
-            {/* Dropzone */}
-            <div className="p-6 rounded-xl border-2 border-dashed border-zinc-700 hover:border-emerald-500/60 bg-zinc-950/60 transition-colors text-center space-y-3">
-              <div className="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center mx-auto text-emerald-400">
-                <Upload className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-white">
-                  Cargar exportación de Fitia (.json o .csv)
-                </p>
-                <p className="text-[11px] text-zinc-400 mt-0.5">
-                  Importa comidas, alimentos, porciones, calorías y macronutrientes.
-                </p>
-              </div>
-
+            <div className="p-6 rounded-xl border-2 border-dashed border-zinc-700 bg-zinc-950/60 text-center space-y-3">
+              <Upload className="w-6 h-6 text-emerald-400 mx-auto" />
+              <p className="text-xs font-semibold text-white">
+                Cargar exportación de Fitia (.json o .csv)
+              </p>
               <label
                 htmlFor="fitia-file-input"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs cursor-pointer transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 <span>{isProcessingFile ? 'Procesando...' : 'Seleccionar Archivo Fitia'}</span>
@@ -705,19 +888,6 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                 />
               </label>
             </div>
-
-            <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-2">
-              <h4 className="font-semibold text-zinc-200 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-amber-400" />
-                <span>Instrucciones de Exportación desde Fitia</span>
-              </h4>
-              <ol className="list-decimal pl-5 space-y-1 text-zinc-400 text-[11px]">
-                <li>Abre la aplicación <strong>Fitia</strong> en tu smartphone.</li>
-                <li>Accede a tu perfil o historial y selecciona <strong>Exportar diario nutricional</strong>.</li>
-                <li>Guarda el archivo en tu dispositivo o envíalo por correo.</li>
-                <li>Cárgalo aquí para consolidar tu ingesta calórica en BodyTrack Pro.</li>
-              </ol>
-            </div>
           </div>
         </div>
       )}
@@ -726,19 +896,11 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
       {activeTab === 'health_connect' && (
         <div className="space-y-6">
           <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-5">
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-bold text-white">Android Health Connect</h3>
-                  {renderStatusBadge(configs.health_connect)}
-                </div>
-                <p className="text-xs text-zinc-400 mt-1 max-w-2xl">
-                  Health Connect de Android es una biblioteca nativa en el dispositivo (<code>androidx.health.connect:connect-client</code>). Los navegadores web no tienen acceso directo a los servicios IPC de Android. Se utiliza un puente o importador compatible.
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
+              <h3 className="text-base font-bold text-white">Android Health Connect</h3>
+              {renderStatusBadge(configs.health_connect)}
             </div>
 
-            {/* Health Connect Feedback */}
             {hcFeedback && (
               <div
                 className={`p-3.5 rounded-xl border text-xs flex items-center gap-2.5 ${
@@ -747,35 +909,27 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                     : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
                 }`}
               >
-                {hcFeedback.type === 'success' ? (
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                ) : (
-                  <AlertTriangle className="w-4 h-4 shrink-0" />
-                )}
                 <span>{hcFeedback.message}</span>
               </div>
             )}
 
-            {/* Permissions list */}
-            <div>
-              <h4 className="text-xs font-semibold text-zinc-300 mb-2">Permisos Explícitos Solicitados en Android</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {HEALTH_CONNECT_PERMISSIONS.map((perm) => (
-                  <div key={perm.key} className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-white">{perm.label}</span>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                        {perm.dataType}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">{perm.purpose}</p>
-                    <code className="text-[9px] text-zinc-500 block mt-1.5 font-mono">{perm.key}</code>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              {HEALTH_CONNECT_PERMISSIONS.map((perm) => (
+                <div
+                  key={perm.key}
+                  className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-white">{perm.label}</span>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                      {perm.dataType}
+                    </span>
                   </div>
-                ))}
-              </div>
+                  <p className="text-[11px] text-zinc-400 mt-1">{perm.purpose}</p>
+                </div>
+              ))}
             </div>
 
-            {/* Ingestion & Simulation Tool */}
             <div className="pt-2 border-t border-zinc-800 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-semibold text-zinc-300">
@@ -784,18 +938,18 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                 <button
                   type="button"
                   onClick={handleLoadDemoHealthConnect}
-                  className="text-[11px] text-emerald-400 hover:text-emerald-300 underline"
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 underline cursor-pointer"
                 >
-                  Cargar paquete sintético de prueba (Pixel 8)
+                  Cargar paquete sintético de prueba (Pixel 8 + Galaxy Watch)
                 </button>
               </div>
 
               <textarea
                 value={healthConnectJson}
                 onChange={(e) => setHealthConnectJson(e.target.value)}
-                placeholder="Pega aquí el paquete JSON exportado por la app companion de Android..."
+                placeholder="Pega aquí el paquete JSON exportado por Health Connect..."
                 rows={5}
-                className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white font-mono text-xs placeholder:text-zinc-600 focus:outline-hidden focus:border-emerald-500"
+                className="w-full p-3 bg-zinc-950 border border-zinc-800 rounded-xl text-white font-mono text-xs"
               />
 
               <div className="flex items-center justify-between">
@@ -803,7 +957,7 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                   type="button"
                   onClick={handleImportHealthConnectPayload}
                   disabled={!healthConnectJson.trim()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs transition-colors disabled:opacity-50 cursor-pointer"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Procesar e Importar Paquete</span>
@@ -812,61 +966,34 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                 <button
                   type="button"
                   onClick={() => setShowAndroidSpec(!showAndroidSpec)}
-                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white"
+                  className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white cursor-pointer"
                 >
                   <Code2 className="w-3.5 h-3.5" />
-                  <span>{showAndroidSpec ? 'Ocultar arquitectura' : 'Ver arquitectura Android Kotlin'}</span>
-                  {showAndroidSpec ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  <span>
+                    {showAndroidSpec ? 'Ocultar arquitectura' : 'Ver arquitectura Android Kotlin'}
+                  </span>
+                  {showAndroidSpec ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
                 </button>
               </div>
             </div>
 
-            {/* Android Companion Architecture Spec */}
             {showAndroidSpec && (
               <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 text-xs space-y-3 font-mono">
                 <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                  <span className="text-emerald-400 font-bold">{ANDROID_COMPANION_SPEC.architectureName}</span>
+                  <span className="text-emerald-400 font-bold">
+                    {ANDROID_COMPANION_SPEC.architectureName}
+                  </span>
                   <span className="text-zinc-500 text-[10px]">Min SDK 26 | Target SDK 34</span>
                 </div>
-                <div>
-                  <p className="text-zinc-400 text-[11px] mb-1 font-sans">Dependencia Jetpack en build.gradle.kts:</p>
-                  <pre className="p-2.5 rounded-lg bg-zinc-900 text-zinc-200 text-[11px] overflow-x-auto">
-                    implementation(&quot;{ANDROID_COMPANION_SPEC.requiredLibrary}&quot;)
-                  </pre>
-                </div>
-                <div>
-                  <p className="text-zinc-400 text-[11px] mb-1 font-sans">Permisos en AndroidManifest.xml:</p>
-                  <pre className="p-2.5 rounded-lg bg-zinc-900 text-zinc-200 text-[11px] overflow-x-auto">
-                    {ANDROID_COMPANION_SPEC.manifestPermissions.join('\n')}
-                  </pre>
-                </div>
+                <pre className="p-2.5 rounded-lg bg-zinc-900 text-zinc-200 text-[11px] overflow-x-auto">
+                  {ANDROID_COMPANION_SPEC.manifestPermissions.join('\n')}
+                </pre>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* --- GOOGLE FIT TAB --- */}
-      {activeTab === 'google_fit' && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-4">
-            <div className="flex items-center gap-3">
-              <h3 className="text-base font-bold text-white">Google Fit</h3>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                API REST Obsolescente
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 text-xs text-amber-200 space-y-2">
-              <p className="font-semibold">Aviso Oficial de Transición de Google:</p>
-              <p className="text-amber-200/90 leading-relaxed">
-                Google ha anunciado formalmente la obsolescencia y el apagado (sunset) progresivo de la Google Fit REST API (Fitness API) para 2025/2026. Siguiendo las directrices técnicas del proyecto, <strong>no se deben crear nuevas dependencias sobre la API antigua de Google Fit</strong>.
-              </p>
-              <p className="text-amber-200/90 leading-relaxed">
-                En su lugar, Google centraliza todos los datos de salud y actividad física en el estándar <strong>Android Health Connect</strong>. Puedes utilizar la pestaña de Health Connect para conectar tu dispositivo Android y tus sensores con BodyTrack Pro.
-              </p>
-            </div>
           </div>
         </div>
       )}
@@ -877,7 +1004,9 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
           <div className="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white">Registro de Auditoría de Sincronizaciones</h3>
+                <h3 className="text-base font-bold text-white">
+                  Registro de Auditoría de Sincronizaciones
+                </h3>
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Historial detallado de importaciones, actualizaciones y control de duplicados.
                 </p>
@@ -890,7 +1019,7 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                     StorageService.clearSyncLogs();
                     refreshData();
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-950 text-zinc-400 hover:text-rose-400 text-xs border border-zinc-800 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-950 text-zinc-400 hover:text-rose-400 text-xs border border-zinc-800 transition-colors cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Limpiar Historial</span>
@@ -900,7 +1029,7 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
 
             {syncLogs.length === 0 ? (
               <div className="p-8 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
-                No hay sincronizaciones registradas aún. Conecta Hevy o carga un archivo para comenzar.
+                No hay sincronizaciones registradas aún.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -911,9 +1040,6 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                       <th className="py-2.5 px-3">Proveedor</th>
                       <th className="py-2.5 px-3">Estado</th>
                       <th className="py-2.5 px-3">Nuevos</th>
-                      <th className="py-2.5 px-3">Actualizados</th>
-                      <th className="py-2.5 px-3">Omitidos</th>
-                      <th className="py-2.5 px-3">Duración</th>
                       <th className="py-2.5 px-3">Detalle</th>
                     </tr>
                   </thead>
@@ -921,40 +1047,21 @@ export const IntegrationsView: React.FC<IntegrationsViewProps> = ({ onDataImport
                     {syncLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-zinc-800/30">
                         <td className="py-2.5 px-3 whitespace-nowrap font-mono text-[11px] text-zinc-400">
-                          {new Date(log.started_at).toLocaleString('es-AR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                          })}
+                          {new Date(log.started_at).toLocaleString('es-AR')}
                         </td>
-                        <td className="py-2.5 px-3 font-medium text-white">{log.provider_name}</td>
+                        <td className="py-2.5 px-3 font-medium text-white">
+                          {log.provider_name}
+                        </td>
                         <td className="py-2.5 px-3">
-                          {log.status === 'success' ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
-                              Éxito
-                            </span>
-                          ) : log.status === 'partial' ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/30">
-                              Parcial
-                            </span>
-                          ) : (
-                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 border border-rose-500/30 font-semibold">
-                              Error
-                            </span>
-                          )}
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">
+                            {log.status}
+                          </span>
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-emerald-400">{log.records_imported}</td>
-                        <td className="py-2.5 px-3 font-mono text-blue-400">{log.records_updated}</td>
-                        <td className="py-2.5 px-3 font-mono text-zinc-500">{log.records_skipped}</td>
-                        <td className="py-2.5 px-3 font-mono text-zinc-400 text-[11px]">{log.duration_ms} ms</td>
-                        <td className="py-2.5 px-3 text-zinc-400 text-[11px] max-w-xs truncate" title={log.details || log.error_message}>
-                          {log.error_message ? (
-                            <span className="text-rose-400">{log.error_message}</span>
-                          ) : (
-                            log.details || '-'
-                          )}
+                        <td className="py-2.5 px-3 font-mono text-emerald-400">
+                          {log.records_imported}
+                        </td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          {log.details || '-'}
                         </td>
                       </tr>
                     ))}

@@ -7,7 +7,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '../common/Modal';
 import { BodyMeasurement, UserProfile } from '../../types';
 import { calculateUSNavyBodyFat, calculateBodyComposition } from '../../utils/calculations';
-import { Info, Calculator } from 'lucide-react';
+import { Calculator, Minus, Plus, Calendar } from 'lucide-react';
+import {
+  ANTHROPOMETRIC_BOUNDS,
+  stepMetric,
+  validateManualDateInput,
+} from '../../utils/auditAndRetentionUtils';
 
 interface MeasurementModalProps {
   isOpen: boolean;
@@ -29,6 +34,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
   currentWeightKg,
 }) => {
   const [date, setDate] = useState<string>('');
+  const [manualDateMode, setManualDateMode] = useState<boolean>(false);
   const [waist, setWaist] = useState<string>('');
   const [neck, setNeck] = useState<string>('');
   const [chest, setChest] = useState<string>('');
@@ -67,7 +73,6 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
     setError('');
   }, [initialMeasurement, defaultDate, isOpen]);
 
-  // Real-time Navy calculation
   const parsedWaist = parseFloat(waist);
   const parsedNeck = parseFloat(neck);
   const parsedHip = parseFloat(hip);
@@ -82,14 +87,26 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isNaN(parsedWaist) || parsedWaist < 40 || parsedWaist > 200) {
-      setError('Por favor introduce un perímetro de cintura válido (40 - 200 cm).');
+    if (
+      isNaN(parsedWaist) ||
+      parsedWaist < ANTHROPOMETRIC_BOUNDS.waist_cm.min ||
+      parsedWaist > ANTHROPOMETRIC_BOUNDS.waist_cm.max
+    ) {
+      setError(
+        `Por favor introduce un perímetro de cintura válido (${ANTHROPOMETRIC_BOUNDS.waist_cm.min} - ${ANTHROPOMETRIC_BOUNDS.waist_cm.max} cm).`
+      );
+      return;
+    }
+
+    const dateCheck = validateManualDateInput(date);
+    if (!dateCheck.valid || !dateCheck.isoDate) {
+      setError(dateCheck.error || 'Introduce una fecha válida.');
       return;
     }
 
     const newRecord: BodyMeasurement = {
       id: initialMeasurement ? initialMeasurement.id : `bm-${Date.now()}`,
-      measured_at: date,
+      measured_at: dateCheck.isoDate,
       waist_cm: Number(parsedWaist.toFixed(1)),
       neck_cm: !isNaN(parsedNeck) ? Number(parsedNeck.toFixed(1)) : undefined,
       chest_cm: !isNaN(parseFloat(chest)) ? Number(parseFloat(chest).toFixed(1)) : undefined,
@@ -124,17 +141,42 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
         )}
 
         <div>
-          <label htmlFor="meas-date" className="block text-xs font-medium text-zinc-300 mb-1">
-            Fecha de medición <span className="text-emerald-400">*</span>
-          </label>
-          <input
-            id="meas-date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-emerald-500"
-            required
-          />
+          <div className="flex items-center justify-between mb-1">
+            <label htmlFor="meas-date" className="block text-xs font-medium text-zinc-300">
+              Fecha de medición <span className="text-emerald-400">*</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setManualDateMode(!manualDateMode)}
+              className="text-[10px] text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Calendar className="w-3 h-3" />
+              <span>{manualDateMode ? 'Usar calendario' : 'Escribir fecha'}</span>
+            </button>
+          </div>
+          {manualDateMode ? (
+            <input
+              id="meas-date"
+              type="text"
+              inputMode="numeric"
+              placeholder="YYYY-MM-DD o DD/MM/AAAA"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs font-mono focus:outline-none focus:border-emerald-500"
+              required
+            />
+          ) : (
+            <input
+              id="meas-date"
+              type="date"
+              min="2020-01-01"
+              max="2030-12-31"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-white text-xs focus:outline-none focus:border-emerald-500"
+              required
+            />
+          )}
         </div>
 
         {/* Priority: Waist & Neck for Recomposition & Navy formula */}
@@ -144,34 +186,74 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
               <Calculator className="w-3.5 h-3.5" />
               Medidas clave para Recomposición & Fórmula Marina
             </span>
-            <span className="text-[10px] text-zinc-400">Prioridad #1</span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              Rango cintura: {ANTHROPOMETRIC_BOUNDS.waist_cm.min}–{ANTHROPOMETRIC_BOUNDS.waist_cm.max} cm
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="meas-waist" className="block text-xs font-medium text-zinc-300 mb-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label htmlFor="meas-waist" className="block text-xs font-medium text-zinc-300">
                 Cintura umbilical (cm) <span className="text-emerald-400">*</span>
               </label>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWaist(String(stepMetric('waist_cm', parsedWaist || 80, -0.5)))
+                  }
+                  className="p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 cursor-pointer"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  id="meas-waist"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.1"
+                  min={ANTHROPOMETRIC_BOUNDS.waist_cm.min}
+                  max={ANTHROPOMETRIC_BOUNDS.waist_cm.max}
+                  placeholder="Ej: 86.8"
+                  value={waist}
+                  onChange={(e) => setWaist(e.target.value)}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-sm text-center focus:outline-none focus:border-emerald-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWaist(String(stepMetric('waist_cm', parsedWaist || 80, 0.5)))
+                  }
+                  className="p-2 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-300 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <input
-                id="meas-waist"
-                type="number"
-                step="0.1"
-                placeholder="Ej: 86.8"
-                value={waist}
+                type="range"
+                min={ANTHROPOMETRIC_BOUNDS.waist_cm.min}
+                max={ANTHROPOMETRIC_BOUNDS.waist_cm.max}
+                step="0.5"
+                value={Math.min(
+                  ANTHROPOMETRIC_BOUNDS.waist_cm.max,
+                  Math.max(ANTHROPOMETRIC_BOUNDS.waist_cm.min, parsedWaist || 85)
+                )}
                 onChange={(e) => setWaist(e.target.value)}
-                className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white font-mono text-sm focus:outline-none focus:border-emerald-500"
-                required
+                className="w-full accent-emerald-500 cursor-pointer"
               />
             </div>
 
-            <div>
-              <label htmlFor="meas-neck" className="block text-xs font-medium text-zinc-300 mb-1">
+            <div className="space-y-1.5">
+              <label htmlFor="meas-neck" className="block text-xs font-medium text-zinc-300">
                 Cuello (cm)
               </label>
               <input
                 id="meas-neck"
                 type="number"
+                inputMode="decimal"
                 step="0.1"
+                min={ANTHROPOMETRIC_BOUNDS.neck_cm.min}
+                max={ANTHROPOMETRIC_BOUNDS.neck_cm.max}
                 placeholder="Ej: 39.2"
                 value={neck}
                 onChange={(e) => setNeck(e.target.value)}
@@ -204,6 +286,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-chest"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="104.5"
               value={chest}
@@ -217,6 +300,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-hip"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="100.5"
               value={hip}
@@ -230,6 +314,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-arm-flexed"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="38.8"
               value={armFlexed}
@@ -243,6 +328,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-arm-relaxed"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="37.2"
               value={armRelaxed}
@@ -256,6 +342,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-thigh"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="60.8"
               value={thigh}
@@ -269,6 +356,7 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
             <input
               id="meas-calf"
               type="number"
+              inputMode="decimal"
               step="0.1"
               placeholder="38.5"
               value={calf}
@@ -294,13 +382,14 @@ export const MeasurementModal: React.FC<MeasurementModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 transition-colors"
+            className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm"
+            data-testid="save-measurement-btn"
+            className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors shadow-sm cursor-pointer"
           >
             Guardar Medidas
           </button>

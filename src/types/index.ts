@@ -79,6 +79,8 @@ export interface BodyMeasurement {
 export interface NutritionTarget {
   id: string;
   effective_from: string;
+  calculated_at?: string;
+  is_adjustable_estimate?: boolean;
   calories_kcal: number;
   protein_g: number;
   carbohydrates_g: number;
@@ -91,8 +93,11 @@ export interface Food {
   id: string;
   name: string;
   brand?: string;
+  barcode?: string;
   serving_size: number;
   serving_unit: string; // 'g', 'ml', 'unidad', 'porción'
+  serving_weight_g?: number; // gram equivalent for 1 'porción' or 'unidad'
+  density_g_per_ml?: number; // default 1.0
   preparation_state?: 'raw' | 'cooked' | 'na'; // 'crudo' vs 'cocido'
   calories_kcal: number;
   protein_g: number;
@@ -101,9 +106,62 @@ export interface Food {
   fiber_g?: number;
   source: 'verified' | 'custom' | 'usda';
   category?: 'proteina' | 'carbohidrato' | 'grasa' | 'vegetal' | 'fruta' | 'lacteo' | 'snack';
+  is_favorite?: boolean;
 }
 
 export type MealCategory = 'desayuno' | 'almuerzo' | 'merienda' | 'cena' | 'colacion';
+
+export interface FrequentMealItem {
+  food_id: string;
+  food_name: string;
+  brand?: string;
+  quantity: number;
+  unit: 'g' | 'ml' | 'porción' | 'unidad';
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g?: number;
+}
+
+export interface FrequentMeal {
+  id: string;
+  name: string;
+  default_meal_type: MealCategory;
+  description?: string;
+  items: FrequentMealItem[];
+  total_calories_kcal: number;
+  total_protein_g: number;
+  total_carbohydrates_g: number;
+  total_fat_g: number;
+  created_at: string;
+}
+
+export interface PushReminderConfig {
+  enabled: boolean;
+  // Avisos Push de las 4 comidas principales (Desayuno, Almuerzo, Merienda, Cena)
+  breakfast_enabled?: boolean;
+  breakfast_time?: string; // "08:00"
+  lunch_enabled?: boolean;
+  lunch_time?: string; // "13:30"
+  snack_enabled?: boolean;
+  snack_time?: string; // "17:30"
+  dinner_enabled?: boolean;
+  dinner_time?: string; // "21:00"
+  smart_suppress_if_logged?: boolean;
+  // Recordatorios generales y compatibilidad
+  weigh_in_time: string; // "07:30"
+  lunch_log_time?: string; // "13:30"
+  dinner_log_time?: string; // "21:00"
+  workout_time: string; // "18:00"
+  remind_weigh_in?: boolean;
+  remind_meals?: boolean;
+  remind_workout?: boolean;
+  weigh_in_reminder?: boolean;
+  meals_reminder?: boolean;
+  meals_time?: string;
+  workout_reminder?: boolean;
+}
 
 export interface FoodLog {
   id: string;
@@ -113,6 +171,8 @@ export interface FoodLog {
   food_id?: string;
   food_name_snapshot: string;
   brand_snapshot?: string;
+  barcode_snapshot?: string;
+  data_source_badge?: 'verified' | 'custom' | 'usda';
   quantity: number;
   unit: string;
   preparation_state?: 'raw' | 'cooked' | 'na';
@@ -203,6 +263,7 @@ export interface WorkoutExerciseLog {
   primary_muscle: MuscleGroup;
   order: number;
   sets: WorkoutSet[];
+  skipped?: boolean;
   notes?: string;
 }
 
@@ -240,11 +301,13 @@ export interface RecoveryLog {
   recorded_at: string; // YYYY-MM-DD
   sleep_hours: number;
   sleep_quality: number; // 1-5
+  resting_heart_rate_bpm?: number;
   fatigue: number; // 1-5
   soreness: number; // 1-5 (DOMS)
   energy: number; // 1-5
   hunger: number; // 1-5
   stress: number; // 1-5
+  source?: 'manual' | 'health_connect' | 'samsung_health' | 'smartwatch';
   notes?: string;
 }
 

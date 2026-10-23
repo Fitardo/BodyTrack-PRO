@@ -49,8 +49,8 @@ export const ONBOARDING_GOAL_OPTIONS: PrimaryGoalOption[] = [
   },
   {
     id: 'muscle_gain',
-    label: 'Ganancia de Masa Muscular (Volumen Limpio)',
-    description: 'Superávit controlado enfocado en sobrecarga progresiva PPL e hipertrofia.',
+    label: 'Aumento de Masa Muscular (Superávit Calórico)',
+    description: 'Superávit calórico controlado (+250 a +350 kcal/día) enfocado en hipertrofia y sobrecarga progresiva PPL.',
     recommendedRatePercent: 0.35,
   },
   {

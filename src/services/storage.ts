@@ -19,7 +19,13 @@ import {
   ProgressPhoto,
   WeeklyReview,
   DailyHabits,
+  FrequentMeal,
+  PushReminderConfig,
 } from '../types';
+import {
+  DEFAULT_FREQUENT_MEALS,
+  BARCODE_PRODUCTS_DB,
+} from '../utils/auditAndRetentionUtils';
 import {
   INITIAL_USER_PROFILE,
   INITIAL_PHYSICAL_GOAL,
@@ -43,9 +49,11 @@ import {
   IntegrationProvider,
 } from '../types/integrations';
 import { AuthSession } from '../types/auth';
+import { buildWorkspaceDataset, WorkspaceInitMode } from '../utils/workspaceMode';
 
 const STORAGE_KEYS = {
   AUTH_SESSION: 'bodytrack_auth_session_v1',
+  WORKSPACE_MODE: 'bodytrack_workspace_mode_v1',
   PROFILE: 'bodytrack_profile_v1',
   GOALS: 'bodytrack_goals_v1',
   NUTRITION_TARGET: 'bodytrack_nutrition_target_v1',
@@ -64,6 +72,9 @@ const STORAGE_KEYS = {
   THEME: 'bodytrack_theme_v1',
   INTEGRATIONS_CONFIG: 'bodytrack_integrations_config_v1',
   SYNC_LOGS: 'bodytrack_sync_logs_v1',
+  FREQUENT_MEALS: 'bodytrack_frequent_meals_v1',
+  PUSH_REMINDERS: 'bodytrack_push_reminders_v1',
+  OFFLINE_QUEUE: 'bodytrack_offline_sync_queue_v1',
 };
 
 // Current active tenant user ID for strict data isolation
@@ -144,7 +155,16 @@ export const StorageService = {
 
   // --- Foods Library ---
   getFoods(): Food[] {
-    return getItem<Food[]>(STORAGE_KEYS.FOODS, DEFAULT_FOODS);
+    const saved = getItem<Food[]>(STORAGE_KEYS.FOODS, [...DEFAULT_FOODS, ...BARCODE_PRODUCTS_DB]);
+    // Ensure barcode products exist in catalog
+    const existingIds = new Set(saved.map((f) => f.id));
+    let merged = [...saved];
+    BARCODE_PRODUCTS_DB.forEach((bf) => {
+      if (!existingIds.has(bf.id)) {
+        merged.push(bf);
+      }
+    });
+    return merged;
   },
   saveFood(food: Food): void {
     const foods = this.getFoods();
@@ -156,9 +176,84 @@ export const StorageService = {
     }
     setItem(STORAGE_KEYS.FOODS, foods);
   },
+  getFavoriteFoodIds(): string[] {
+    return this.getFoods()
+      .filter((f) => Boolean(f.is_favorite))
+      .map((f) => f.id);
+  },
+  toggleFavoriteFood(foodId: string): string[] {
+    const foods = this.getFoods().map((f) =>
+      f.id === foodId ? { ...f, is_favorite: !f.is_favorite } : f
+    );
+    setItem(STORAGE_KEYS.FOODS, foods);
+    return foods.filter((f) => Boolean(f.is_favorite)).map((f) => f.id);
+  },
   deleteFood(id: string): void {
     const filtered = this.getFoods().filter((f) => f.id !== id);
     setItem(STORAGE_KEYS.FOODS, filtered);
+  },
+
+  // --- Frequent Meals (1-click logging) ---
+  getFrequentMeals(): FrequentMeal[] {
+    return getItem<FrequentMeal[]>(STORAGE_KEYS.FREQUENT_MEALS, DEFAULT_FREQUENT_MEALS);
+  },
+  saveFrequentMeal(meal: FrequentMeal): void {
+    const list = this.getFrequentMeals();
+    const idx = list.findIndex((m) => m.id === meal.id);
+    if (idx >= 0) {
+      list[idx] = meal;
+    } else {
+      list.unshift(meal);
+    }
+    setItem(STORAGE_KEYS.FREQUENT_MEALS, list);
+  },
+  deleteFrequentMeal(id: string): void {
+    const filtered = this.getFrequentMeals().filter((m) => m.id !== id);
+    setItem(STORAGE_KEYS.FREQUENT_MEALS, filtered);
+  },
+
+  // --- Push Reminders Config ---
+  getPushReminders(): PushReminderConfig {
+    const defaults: PushReminderConfig = {
+      enabled: true,
+      breakfast_enabled: true,
+      breakfast_time: '08:00',
+      lunch_enabled: true,
+      lunch_time: '13:30',
+      snack_enabled: true,
+      snack_time: '17:30',
+      dinner_enabled: true,
+      dinner_time: '21:00',
+      smart_suppress_if_logged: true,
+      weigh_in_time: '07:30',
+      lunch_log_time: '13:30',
+      dinner_log_time: '21:00',
+      workout_time: '18:00',
+      remind_weigh_in: true,
+      remind_meals: true,
+      remind_workout: true,
+      weigh_in_reminder: true,
+      meals_reminder: true,
+      meals_time: '13:30',
+      workout_reminder: true,
+    };
+    const stored = getItem<PushReminderConfig>(STORAGE_KEYS.PUSH_REMINDERS, defaults);
+    return {
+      ...defaults,
+      ...stored,
+      breakfast_enabled: stored.breakfast_enabled ?? true,
+      breakfast_time: stored.breakfast_time || '08:00',
+      lunch_enabled: stored.lunch_enabled ?? true,
+      lunch_time: stored.lunch_time || stored.lunch_log_time || '13:30',
+      snack_enabled: stored.snack_enabled ?? true,
+      snack_time: stored.snack_time || '17:30',
+      dinner_enabled: stored.dinner_enabled ?? true,
+      dinner_time: stored.dinner_time || stored.dinner_log_time || '21:00',
+      smart_suppress_if_logged: stored.smart_suppress_if_logged ?? true,
+    };
+  },
+  savePushReminders(config: PushReminderConfig): void {
+    setItem(STORAGE_KEYS.PUSH_REMINDERS, config);
   },
 
   // --- Food Logs ---
@@ -689,6 +784,81 @@ export const StorageService = {
 
   clearAuthSession(): void {
     this.setAuthSession(null);
+  },
+
+  getWorkspaceMode(): WorkspaceInitMode {
+    return getItem<WorkspaceInitMode>(STORAGE_KEYS.WORKSPACE_MODE, 'demo');
+  },
+
+  setWorkspaceMode(mode: WorkspaceInitMode): void {
+    setItem<WorkspaceInitMode>(STORAGE_KEYS.WORKSPACE_MODE, mode);
+  },
+
+  /**
+   * Initializes the active tenant workspace either with complete Demo Data ('demo')
+   * or completely from zero ('zero') so the user can configure everything in the full-screen Onboarding Wizard.
+   */
+  initializeWorkspaceMode(
+    mode: WorkspaceInitMode,
+    userOverrides?: {
+      id?: string;
+      name?: string;
+      email?: string;
+      role?: 'admin' | 'user';
+      token?: string;
+    }
+  ): AuthSession {
+    const existingSession = this.getAuthSession();
+    const userId =
+      userOverrides?.id ||
+      existingSession?.user.id ||
+      (mode === 'zero' ? 'usr_clean_zero' : 'usr_demo_tester');
+    const userName =
+      userOverrides?.name ||
+      existingSession?.user.name ||
+      'Santiago Quinteros';
+    const userEmail =
+      userOverrides?.email ||
+      existingSession?.user.email ||
+      (mode === 'zero' ? 'santiago.cero@bodytrack.pro' : 'beta.tester@bodytrack.pro');
+    const userRole = userOverrides?.role || existingSession?.user.role || 'user';
+
+    const newSession: AuthSession = {
+      token: userOverrides?.token || existingSession?.token || `bt_local_${mode}_${Date.now()}`,
+      expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+      user: {
+        id: userId,
+        email: userEmail,
+        name: userName,
+        role: userRole,
+        status: 'active',
+        created_at: existingSession?.user.created_at || new Date().toISOString(),
+        onboarding_completed: mode === 'demo',
+        privacy_accepted_at: mode === 'demo' ? new Date().toISOString() : undefined,
+      },
+    };
+
+    this.setAuthSession(newSession);
+    const dataset = buildWorkspaceDataset(mode, userName);
+
+    setItem(STORAGE_KEYS.WORKSPACE_MODE, mode);
+    setItem(STORAGE_KEYS.PROFILE, dataset.profile);
+    setItem(STORAGE_KEYS.GOALS, dataset.goal);
+    setItem(STORAGE_KEYS.NUTRITION_TARGET, dataset.nutritionTarget);
+    setItem(STORAGE_KEYS.FOODS, DEFAULT_FOODS);
+    setItem(STORAGE_KEYS.EXERCISES, DEFAULT_EXERCISES);
+    setItem(STORAGE_KEYS.ROUTINES, DEFAULT_ROUTINES);
+    setItem(STORAGE_KEYS.WEIGH_INS, dataset.weighIns);
+    setItem(STORAGE_KEYS.BODY_MEASUREMENTS, dataset.measurements);
+    setItem(STORAGE_KEYS.FOOD_LOGS, dataset.foodLogs);
+    setItem(STORAGE_KEYS.WORKOUT_SESSIONS, dataset.workoutSessions);
+    setItem(STORAGE_KEYS.ACTIVITY_LOGS, dataset.activityLogs);
+    setItem(STORAGE_KEYS.RECOVERY_LOGS, dataset.recoveryLogs);
+    setItem(STORAGE_KEYS.PROGRESS_PHOTOS, []);
+    setItem(STORAGE_KEYS.WEEKLY_REVIEWS, dataset.weeklyReviews);
+    setItem(STORAGE_KEYS.HABITS, dataset.habitsByDate);
+
+    return newSession;
   },
 
   // Export full user dataset for privacy compliance (GDPR Right to Data Portability)
