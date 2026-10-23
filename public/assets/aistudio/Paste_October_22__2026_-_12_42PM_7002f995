@@ -1,0 +1,959 @@
+# PROYECTO: BODYTRACK PRO — SISTEMA INTEGRAL DE RECOMPOSICIÓN CORPORAL
+
+## 1. ROL Y OBJETIVO
+
+Actúa como un equipo multidisciplinario compuesto por:
+
+- Un Product Manager especializado en aplicaciones de fitness.
+- Un desarrollador full-stack senior.
+- Un diseñador UX/UI especializado en dashboards y aplicaciones responsive.
+- Un especialista en análisis de datos y visualización.
+- Un profesional de ciencias del ejercicio y nutrición deportiva basada en evidencia.
+
+Tu misión es diseñar y desarrollar una aplicación web funcional, moderna, escalable y responsive llamada **BodyTrack Pro**, destinada al seguimiento de la recomposición corporal mediante déficit calórico, entrenamiento de fuerza, nutrición y actividad física.
+
+No quiero una landing page estática ni un prototipo visual sin funcionalidad. Quiero una aplicación real con navegación, formularios funcionales, persistencia de datos, cálculos automáticos, gráficos, historial, edición y eliminación de registros.
+
+Antes de escribir código, analiza los requisitos, define la arquitectura y organiza el desarrollo por etapas. Después, implementa y prueba cada módulo.
+
+## 2. CONTEXTO DEL USUARIO
+
+Utiliza el siguiente perfil como configuración inicial editable:
+
+- Edad: 24 años.
+- Sexo para las ecuaciones metabólicas: masculino.
+- Estatura: 175 cm.
+- Peso inicial: 85 kg.
+- Objetivo principal: perder grasa corporal y conservar o desarrollar masa muscular.
+- Experiencia entrenando: más de un año.
+- Frecuencia objetivo: 5–6 días semanales.
+- Sistema de entrenamiento preferido: Push/Pull/Legs (PPL).
+- Horario habitual de entrenamiento: mañana.
+- Actividad cotidiana: principalmente sedentaria.
+- Pasos diarios iniciales: menos de 5.000.
+- Frecuencia alimentaria: 3–4 comidas al día.
+- Restricciones alimentarias conocidas: ninguna.
+- Condiciones médicas declaradas: ninguna.
+- Objetivo calórico inicial de prueba: 2.400 kcal/día.
+- Objetivo inicial de proteína: 180 g/día.
+- Objetivo inicial de carbohidratos: 263 g/día.
+- Objetivo inicial de grasas: 70 g/día.
+
+Los macronutrientes indicados suman aproximadamente 2.402 kcal por redondeo. La aplicación debe permitir ajustar cantidades y mostrar siempre las calorías derivadas de los macros.
+
+Estos valores son parámetros iniciales estimados, no prescripciones invariables. No asumas que 2.400 kcal representan necesariamente un déficit real. La aplicación debe ayudar a estimar y revisar el mantenimiento a partir de la evolución observada.
+
+El usuario puede editar todos sus datos desde el perfil, sin necesidad de modificar código.
+
+## 3. VISIÓN DEL PRODUCTO
+
+BodyTrack Pro debe permitir responder, en cualquier momento, estas preguntas:
+
+1. ¿Cuánto peso estoy perdiendo por semana?
+2. ¿Está disminuyendo mi cintura?
+3. ¿Estoy cumpliendo mi objetivo calórico y mis macros?
+4. ¿Estoy manteniendo o mejorando mi fuerza?
+5. ¿Qué grupos musculares entrené y cuánto volumen acumulé?
+6. ¿Cómo cambió mi físico desde el inicio?
+7. ¿Estoy progresando demasiado rápido, demasiado lento o a un ritmo adecuado?
+8. ¿Qué datos justifican mantener o ajustar mi ingesta?
+9. ¿Cuántos días fui consistente con el plan?
+10. ¿Qué necesito priorizar esta semana?
+
+Toda recomendación debe basarse en datos registrados y mostrar claramente qué es una medición, qué es una estimación y qué es una sugerencia.
+
+## 4. DISEÑO Y EXPERIENCIA DE USUARIO
+
+Desarrolla una interfaz de aspecto profesional, similar a un producto SaaS premium de fitness y analítica personal.
+
+### Dirección visual
+
+- Nombre: BodyTrack Pro.
+- Idioma: español latinoamericano.
+- Unidades: kg, cm, kcal, g, km y minutos.
+- Zona horaria: configurable; valor inicial America/Argentina/Catamarca.
+- Moneda: no necesaria para el seguimiento principal.
+- Estética: minimalista, deportiva, tecnológica y orientada a datos.
+- Tema oscuro como opción predeterminada, con alternativa clara.
+- Tipografía moderna y legible.
+- Tarjetas con jerarquía visual clara.
+- Gráficos limpios y fáciles de interpretar.
+- Colores semánticos consistentes, con indicadores accesibles que no dependan únicamente del color.
+- Iconografía uniforme.
+- Diseño mobile-first, optimizado para teléfonos Android y escritorio.
+- Formularios breves, accesibles y cómodos para introducir datos diariamente.
+- Estados de carga, errores, confirmaciones, ausencia de registros y datos incompletos.
+- Evitar interfaces recargadas, animaciones innecesarias y elementos decorativos sin función.
+
+La navegación principal debe incluir:
+
+1. Dashboard.
+2. Peso y composición corporal.
+3. Nutrición.
+4. Entrenamiento.
+5. Actividad y recuperación.
+6. Fotografías de progreso.
+7. Informes.
+8. Perfil y configuración.
+
+En móvil, utiliza una navegación compacta y controles táctiles cómodos.
+
+## 5. DASHBOARD PRINCIPAL
+
+El dashboard debe ofrecer una vista ejecutiva de mi estado actual.
+
+### Tarjetas de indicadores principales
+
+Mostrar:
+
+- Peso más reciente.
+- Promedio de peso de los últimos siete días.
+- Diferencia respecto al promedio de la semana anterior.
+- Cambio total desde el inicio.
+- Perímetro de cintura más reciente.
+- Calorías consumidas hoy.
+- Proteínas, carbohidratos y grasas consumidos.
+- Porcentaje de cumplimiento calórico.
+- Pasos registrados hoy.
+- Entrenamientos completados esta semana.
+- Promedio de sueño, si se registra.
+- Racha de días con registros completos.
+
+Cada tarjeta debe incluir el valor, la unidad, la fecha del último dato y, cuando exista información suficiente, una comparación con el período anterior.
+
+### Gráficos principales
+
+Implementa gráficos interactivos para:
+
+- Peso diario y promedio móvil de siete días.
+- Evolución del perímetro de cintura.
+- Calorías consumidas frente al objetivo.
+- Proteínas, carbohidratos y grasas frente a sus objetivos.
+- Volumen de entrenamiento por semana.
+- Evolución de cargas y repeticiones por ejercicio.
+- Pasos diarios y promedio semanal.
+- Relación entre peso y cintura a lo largo del tiempo.
+
+Permite seleccionar períodos de 7, 30, 90 y 180 días, además de un rango personalizado.
+
+Los gráficos deben distinguir los datos reales de las proyecciones. Nunca inventes puntos de datos para completar visualizaciones.
+
+### Resumen inteligente
+
+Crear un módulo denominado “Análisis semanal” que genere observaciones descriptivas a partir de datos disponibles.
+
+Ejemplos:
+
+- “El promedio semanal disminuyó 0,3 kg respecto de la semana anterior”.
+- “La cintura se mantuvo estable durante las últimas tres mediciones”.
+- “El promedio de proteína quedó por debajo del objetivo en cuatro días”.
+- “Tu rendimiento en press de banca se mantuvo estable”.
+- “No hay suficientes registros para evaluar la tendencia”.
+
+Las conclusiones deben incluir el período analizado y la cantidad de registros utilizados. Si faltan datos, indicarlo expresamente.
+
+## 6. MÓDULO DE PESO Y COMPOSICIÓN CORPORAL
+
+Crear un módulo completo para registrar y analizar las medidas físicas.
+
+### Registro de peso
+
+Cada registro debe incluir:
+
+- Fecha y hora.
+- Peso en kg.
+- Hora del pesaje.
+- Si se realizó en ayunas.
+- Observaciones opcionales.
+- Contexto opcional: entrenamiento previo, comida abundante, viaje u otra circunstancia relevante.
+
+Permitir crear, editar y eliminar registros.
+
+Recomendar, sin imponer, pesajes matutinos después de ir al baño y antes de comer, para facilitar comparaciones consistentes.
+
+### Indicadores calculados
+
+Calcular:
+
+- Cambio absoluto de peso.
+- Cambio porcentual desde el inicio.
+- Promedio semanal.
+- Promedio móvil de siete días cuando existan datos suficientes.
+- Variación entre promedios semanales.
+- Ritmo de pérdida o ganancia en kg por semana.
+- Tendencia de largo plazo.
+
+No interpretes automáticamente una subida diaria como ganancia de grasa. Mostrar una explicación sobre variaciones de agua, glucógeno, sodio y contenido intestinal.
+
+### Registro de medidas corporales
+
+Permitir registrar:
+
+- Cintura.
+- Cuello.
+- Pecho.
+- Cadera.
+- Brazo relajado.
+- Brazo flexionado, opcional.
+- Muslo.
+- Pantorrilla.
+
+Cada medida debe incluir fecha, unidad, observaciones y método de medición opcional.
+
+Mostrar la evolución individual de cada medida y comparar períodos equivalentes.
+
+### Estimaciones de composición corporal
+
+Permitir ingresar un porcentaje de grasa corporal obtenido por un método externo y especificar el método utilizado.
+
+Cuando haya datos adecuados, permitir estimaciones antropométricas opcionales, indicando claramente el método y sus limitaciones.
+
+No presentar el porcentaje de grasa inferido de una fotografía como si fuera una medición objetiva.
+
+Si el porcentaje de grasa es una estimación, mostrarlo etiquetado como “estimado”.
+
+Permitir calcular masa grasa estimada y masa libre de grasa a partir de un porcentaje de grasa introducido manualmente, indicando que ambas dependen de la precisión de ese dato.
+
+### Objetivos físicos
+
+Permitir configurar:
+
+- Peso objetivo.
+- Rango de peso preferido.
+- Cintura objetivo.
+- Ritmo de cambio semanal deseado.
+- Fecha objetivo opcional.
+
+No exigir una fecha límite. No recomendar pérdidas extremas ni presentar un peso específico como obligatorio.
+
+## 7. MÓDULO DE NUTRICIÓN Y DÉFICIT CALÓRICO
+
+Este módulo debe ser uno de los componentes centrales del producto.
+
+### Perfil nutricional
+
+Registrar y editar:
+
+- Edad.
+- Sexo requerido por la ecuación metabólica seleccionada.
+- Peso.
+- Estatura.
+- Actividad cotidiana.
+- Frecuencia de entrenamiento.
+- Objetivo nutricional.
+- Preferencias alimentarias.
+- Restricciones.
+- Número de comidas habitual.
+
+### Estimación del gasto energético
+
+Implementar la ecuación de Mifflin–St Jeor para estimar el metabolismo basal, indicando que es una predicción.
+
+Estimar el gasto energético total mediante un factor de actividad configurable, pero permitir corregir esa estimación a partir de la tendencia de peso y la ingesta registrada.
+
+Mostrar por separado:
+
+- Metabolismo basal estimado.
+- Gasto energético total estimado.
+- Ingesta objetivo.
+- Déficit o superávit estimado.
+- Nivel de confianza cualitativo y datos que faltan.
+
+No confundir metabolismo basal con calorías de mantenimiento.
+
+No duplicar automáticamente las calorías estimadas del ejercicio si ya están contempladas en el gasto total.
+
+### Objetivos de macronutrientes
+
+Permitir configurar objetivos diarios de:
+
+- Calorías.
+- Proteínas.
+- Carbohidratos.
+- Grasas.
+- Fibra.
+- Agua.
+
+Usar los factores energéticos habituales para mostrar las calorías derivadas de los macronutrientes: 4 kcal/g para proteínas, 4 kcal/g para carbohidratos y 9 kcal/g para grasas.
+
+La suma puede diferir ligeramente de las calorías de las etiquetas debido a redondeos, fibra y otros componentes.
+
+### Registro de comidas
+
+Cada comida debe permitir:
+
+- Fecha.
+- Hora.
+- Nombre de la comida.
+- Categoría: desayuno, almuerzo, merienda, cena o colación.
+- Alimentos.
+- Cantidad consumida.
+- Unidad de medida.
+- Calorías.
+- Proteínas.
+- Carbohidratos.
+- Grasas.
+- Fibra, si está disponible.
+- Observaciones.
+
+Permitir agregar varios alimentos a una comida y editar o eliminar cada alimento.
+
+Implementar una base de alimentos personalizada con datos introducidos manualmente.
+
+No inventar valores nutricionales de alimentos. Cuando no exista información, solicitar la etiqueta nutricional o permitir que el usuario introduzca una estimación claramente identificada.
+
+Distinguir entre pesos de alimentos crudos y cocidos para evitar errores de registro.
+
+Si se utiliza una API nutricional externa en una fase posterior, documentar el proveedor, las unidades, las limitaciones, la autenticación y el manejo de errores.
+
+### Resumen diario
+
+Mostrar:
+
+- Calorías consumidas.
+- Calorías restantes o exceso respecto al objetivo.
+- Proteínas consumidas y pendientes.
+- Carbohidratos consumidos y pendientes.
+- Grasas consumidas y pendientes.
+- Fibra.
+- Agua.
+- Distribución por comidas.
+
+Actualizar el resumen inmediatamente al agregar, editar o eliminar un alimento.
+
+No mostrar “calorías quemadas” como una cifra exacta cuando provengan de estimaciones de dispositivos.
+
+### Historial nutricional
+
+Incluir:
+
+- Calendario de registros.
+- Promedios semanales de calorías y macros.
+- Días dentro del rango calórico objetivo.
+- Cumplimiento de proteína.
+- Días con registros incompletos.
+- Comparación entre ingesta prevista y real.
+
+No penalizar ni etiquetar moralmente los alimentos.
+
+## 8. MÓDULO DE ENTRENAMIENTO
+
+Implementar un sistema de seguimiento del gimnasio adaptado a una rutina Push/Pull/Legs.
+
+### Rutinas iniciales
+
+Crear rutinas editables con estos nombres:
+
+- Push A.
+- Pull A.
+- Legs A.
+- Push B.
+- Pull B.
+- Legs B.
+
+Precargar ejemplos de ejercicios, series y repeticiones, pero permitir que el usuario modifique completamente la programación.
+
+No asumir que una rutina de seis días es siempre apropiada. Permitir programar entre 3 y 6 días, descanso y semanas de descarga.
+
+### Catálogo de ejercicios
+
+Cada ejercicio debe incluir:
+
+- Nombre.
+- Grupo muscular principal.
+- Grupos secundarios.
+- Patrón de movimiento.
+- Equipamiento.
+- Tipo de ejercicio.
+- Unidad de carga.
+- Instrucciones opcionales.
+- Variantes.
+- Historial personal.
+
+### Registro de sesión
+
+Durante cada entrenamiento, permitir:
+
+- Seleccionar la rutina.
+- Añadir o quitar ejercicios.
+- Registrar series.
+- Registrar peso utilizado.
+- Registrar repeticiones.
+- Registrar repeticiones en reserva (RIR).
+- Marcar una serie como calentamiento o serie efectiva.
+- Registrar descansos opcionales.
+- Añadir observaciones.
+- Marcar la sesión como completada.
+
+Guardar automáticamente los cambios y permitir continuar una sesión interrumpida.
+
+### Indicadores de entrenamiento
+
+Calcular:
+
+- Sesiones por semana.
+- Duración de cada sesión.
+- Series efectivas por grupo muscular.
+- Volumen de entrenamiento por ejercicio.
+- Récords personales.
+- Evolución de cargas y repeticiones.
+- Consistencia semanal.
+- Frecuencia por grupo muscular.
+
+Definir el volumen de carga como series por repeticiones por peso, cuando la unidad de carga lo permita.
+
+No comparar directamente el volumen de ejercicios diferentes como si fueran equivalentes.
+
+### Estimación de fuerza
+
+Permitir estimar el 1RM mediante una fórmula configurable, como Epley, cuando las condiciones de la serie sean adecuadas.
+
+Identificarlo como estimación y no como una prueba máxima real.
+
+### Progresión
+
+Incorporar una sugerencia de progresión doble:
+
+- El usuario define un rango de repeticiones.
+- Si completa todas las series en el extremo superior con técnica adecuada, puede recibir una sugerencia de incremento de carga.
+- El incremento debe ser configurable y adaptarse al ejercicio.
+- La aplicación no debe aumentar automáticamente las cargas sin autorización.
+
+Priorizar técnica, recuperación y ausencia de dolor.
+
+## 9. MÓDULO DE ACTIVIDAD Y RECUPERACIÓN
+
+Permitir registrar:
+
+- Pasos diarios.
+- Distancia caminada.
+- Cardio.
+- Tipo de actividad.
+- Duración.
+- Intensidad percibida.
+- Sueño en horas.
+- Calidad subjetiva del sueño.
+- Fatiga.
+- Dolor muscular.
+- Energía.
+- Hambre.
+- Estrés percibido.
+
+Cada dato debe ser opcional.
+
+Crear gráficos de actividad diaria y promedios semanales.
+
+Permitir objetivos progresivos de pasos, comenzando desde el nivel habitual del usuario.
+
+No imponer aumentos bruscos de actividad ni interpretar el ejercicio como compensación por haber comido.
+
+No diagnosticar enfermedades ni problemas de recuperación.
+
+## 10. MÓDULO DE FOTOGRAFÍAS DE PROGRESO
+
+Implementar una galería privada de seguimiento físico.
+
+### Fotografías
+
+Permitir cargar fotografías propias desde el dispositivo, clasificadas como:
+
+- Frontal.
+- Lateral.
+- Espalda.
+- Otra.
+
+Cada imagen debe tener:
+
+- Fecha.
+- Peso registrado ese día, si existe.
+- Medidas asociadas opcionales.
+- Observaciones.
+- Etiqueta de etapa: inicio, seguimiento o meta visual.
+
+Permitir visualizar fotografías por fecha, comparar dos fechas y revisar una secuencia cronológica.
+
+### Comparador visual
+
+Crear una vista de comparación lado a lado con:
+
+- Fecha de cada imagen.
+- Peso asociado.
+- Cintura asociada, si está registrada.
+- Diferencia temporal entre las imágenes.
+
+No alterar automáticamente las fotografías originales.
+
+No estimar con precisión el porcentaje de grasa corporal mediante fotografías.
+
+### Imagen de referencia futura
+
+Permitir guardar una imagen motivacional de físico objetivo generada o aportada por el usuario, identificándola claramente como referencia visual, no como predicción garantizada.
+
+Mostrarla separada de las fotografías reales para evitar confusiones.
+
+### Privacidad
+
+Las fotografías son datos personales sensibles en la práctica, por lo que deben tener acceso restringido.
+
+No utilizar imágenes para entrenar modelos ni compartirlas públicamente.
+
+Si se usa almacenamiento en la nube, implementar permisos privados y autenticación. No guardar fotografías en URLs públicas sin protección.
+
+## 11. SISTEMA DE ANÁLISIS Y AJUSTE CALÓRICO
+
+Crear un módulo denominado “Revisión semanal”.
+
+El objetivo es apoyar la toma de decisiones, no sustituir el criterio profesional.
+
+### Datos necesarios
+
+Antes de sugerir ajustes, considerar:
+
+- Promedios de peso de semanas consecutivas.
+- Número de pesajes disponibles.
+- Calorías promedio registradas.
+- Completitud del registro nutricional.
+- Cumplimiento del objetivo calórico.
+- Evolución de la cintura.
+- Rendimiento en el gimnasio.
+- Actividad diaria.
+- Hambre y recuperación, si están registradas.
+
+### Reglas de análisis
+
+1. No recomendar cambios basándose en una sola pesada.
+2. Priorizar tendencias de varias semanas.
+3. Solicitar al menos dos semanas de datos razonablemente consistentes antes de proponer un ajuste rutinario.
+4. Si los registros son incompletos, explicar que la estimación tiene baja confianza.
+5. Si el peso baja a un ritmo adecuado y el rendimiento se mantiene, sugerir mantener el plan.
+6. Si no hay descenso durante varias semanas, revisar primero la adherencia, el registro de alimentos, la actividad y las posibles fluctuaciones de agua.
+7. Si el descenso es demasiado rápido o empeoran el rendimiento, la energía o la recuperación, recomendar revisar la ingesta y el entrenamiento.
+8. Mostrar el motivo de cualquier sugerencia y permitir aceptarla, rechazarla o posponerla.
+9. Nunca cambiar automáticamente las calorías objetivo.
+10. Evitar déficits extremos y recomendaciones que promuevan deshidratación, ayuno excesivo o ejercicio compensatorio.
+
+Como orientación configurable para un adulto que busca recomposición corporal, utilizar un rango de pérdida de peso conservador, por ejemplo, alrededor del 0,25–0,75 % del peso por semana, sin tratarlo como una regla universal.
+
+### Estimación retrospectiva del mantenimiento
+
+Cuando existan datos suficientes de peso e ingesta, permitir una estimación aproximada del gasto energético observado.
+
+Explicar que este cálculo puede verse afectado por errores de registro, cambios de agua, glucógeno, actividad y adaptación fisiológica.
+
+No mostrar un valor de mantenimiento con precisión falsa.
+
+## 12. INFORMES Y EXPORTACIÓN
+
+Crear un centro de informes con períodos configurables.
+
+Incluir:
+
+- Resumen semanal.
+- Informe mensual.
+- Evolución del peso.
+- Evolución de medidas.
+- Adherencia nutricional.
+- Historial de entrenamiento.
+- Evolución de cargas.
+- Actividad física.
+- Comparación de fotografías.
+- Resumen de objetivos alcanzados.
+
+Permitir exportar datos a CSV y generar un informe imprimible o PDF, si la tecnología elegida lo permite.
+
+La exportación debe utilizar registros reales, fechas correctas y unidades explícitas.
+
+## 13. OBJETIVOS, HÁBITOS Y CONSISTENCIA
+
+Crear un módulo para objetivos diarios y semanales.
+
+Ejemplos:
+
+- Registrar el peso cuando corresponda.
+- Cumplir el objetivo de proteína.
+- Registrar las comidas.
+- Completar el entrenamiento previsto.
+- Alcanzar el objetivo de pasos.
+- Dormir una cantidad suficiente de horas.
+- Registrar medidas en la fecha programada.
+
+Mostrar tasas de cumplimiento y tendencias de consistencia.
+
+Permitir desactivar cualquier hábito.
+
+No convertir la aplicación en un sistema punitivo. Las rachas son indicadores motivacionales, no una medida del valor personal ni de la calidad global del progreso.
+
+## 14. ARQUITECTURA TÉCNICA
+
+Primero inspecciona las capacidades reales de Gemini Argon y el entorno de desarrollo disponible.
+
+Selecciona una arquitectura mantenible según las tecnologías soportadas.
+
+Preferencias iniciales, sujetas a compatibilidad:
+
+- Frontend: React con TypeScript.
+- Estilos: Tailwind CSS o sistema de diseño equivalente.
+- Gráficos: Recharts o biblioteca equivalente.
+- Backend: Supabase u otro servicio compatible.
+- Base de datos: PostgreSQL, si está disponible.
+- Autenticación: servicio seguro y compatible.
+- Almacenamiento de imágenes: almacenamiento privado con control de acceso.
+- Validación: esquemas tipados.
+- Formularios: validación de entradas y mensajes de error.
+- Pruebas: pruebas unitarias, de integración y de flujos principales.
+
+Si la plataforma no soporta alguno de estos componentes, propone la alternativa más compatible y explica las limitaciones.
+
+No simules un backend real con botones decorativos o datos estáticos.
+
+### Persistencia
+
+Todos los registros importantes deben sobrevivir a una recarga y a una nueva sesión.
+
+Para una primera versión local, se puede utilizar almacenamiento local con una capa de acceso a datos desacoplada, pero debe quedar claramente identificado como almacenamiento local.
+
+No almacenar contraseñas, tokens secretos o credenciales en el frontend.
+
+Si se implementa sincronización en la nube, utilizar autenticación, políticas de autorización y permisos por usuario.
+
+## 15. MODELO DE DATOS
+
+Diseña un modelo de datos normalizado con, al menos, las siguientes entidades:
+
+### profiles
+- id
+- user_id
+- age
+- sex_for_equations
+- height_cm
+- initial_weight_kg
+- activity_level
+- training_frequency
+- preferred_training_split
+- dietary_preferences
+- timezone
+- created_at
+- updated_at
+
+### goals
+- id
+- user_id
+- goal_type
+- target_value
+- unit
+- start_date
+- optional_target_date
+- active
+
+### weigh_ins
+- id
+- user_id
+- measured_at
+- weight_kg
+- fasting
+- context
+- notes
+
+### body_measurements
+- id
+- user_id
+- measured_at
+- waist_cm
+- neck_cm
+- chest_cm
+- hip_cm
+- arm_cm
+- thigh_cm
+- calf_cm
+- notes
+
+### nutrition_targets
+- id
+- user_id
+- effective_from
+- calories_kcal
+- protein_g
+- carbohydrates_g
+- fat_g
+- fiber_g
+- water_ml
+
+### foods
+- id
+- user_id
+- name
+- brand
+- serving_size
+- serving_unit
+- calories_kcal
+- protein_g
+- carbohydrates_g
+- fat_g
+- fiber_g
+- source
+- verified
+
+### food_logs
+- id
+- user_id
+- consumed_at
+- meal_type
+- food_id
+- food_name_snapshot
+- quantity
+- unit
+- preparation_state
+- calories_kcal
+- protein_g
+- carbohydrates_g
+- fat_g
+- fiber_g
+- notes
+
+Los valores snapshot deben preservar los nutrientes registrados en el momento del consumo, aunque posteriormente se edite un alimento de la biblioteca.
+
+### training_programs
+- id
+- user_id
+- name
+- description
+- active
+
+### exercises
+- id
+- user_id_nullable
+- name
+- primary_muscle
+- secondary_muscles
+- movement_pattern
+- equipment
+
+### workout_sessions
+- id
+- user_id
+- program_id
+- started_at
+- completed_at
+- duration_minutes
+- notes
+- status
+
+### workout_exercises
+- id
+- session_id
+- exercise_id
+- exercise_order
+
+### workout_sets
+- id
+- workout_exercise_id
+- set_number
+- weight_kg
+- repetitions
+- rir
+- is_warmup
+- notes
+
+### activity_logs
+- id
+- user_id
+- activity_date
+- steps
+- distance_km
+- cardio_minutes
+- cardio_type
+- intensity
+
+### recovery_logs
+- id
+- user_id
+- recorded_at
+- sleep_hours
+- sleep_quality
+- fatigue
+- soreness
+- energy
+- hunger
+- stress
+
+### progress_photos
+- id
+- user_id
+- captured_at
+- photo_type
+- private_storage_path
+- associated_weight_kg
+- associated_waist_cm
+- notes
+- is_reference_image
+
+### weekly_reviews
+- id
+- user_id
+- period_start
+- period_end
+- weight_average_kg
+- calorie_average_kcal
+- adherence_summary
+- performance_summary
+- recommendation
+- recommendation_reason
+- user_decision
+- created_at
+
+Ajusta las tablas y relaciones según las necesidades reales. Incluye claves primarias, claves foráneas, restricciones, índices, reglas de eliminación y marcas temporales.
+
+Todos los registros personales deben estar aislados por usuario. No dependas únicamente de filtros de interfaz para garantizar la seguridad.
+
+## 16. SEGURIDAD Y PRIVACIDAD
+
+Implementa, según las capacidades de la plataforma:
+
+- Autenticación segura.
+- Autorización en el servidor.
+- Row Level Security en tablas de Supabase, si se utiliza.
+- Validación de entradas en frontend y backend.
+- Protección de fotografías mediante almacenamiento privado.
+- Manejo seguro de errores.
+- Secretos fuera del código cliente.
+- Exportación de datos personales.
+- Eliminación de registros y cuenta con confirmación.
+- Política de privacidad y explicación de almacenamiento.
+- Copias de seguridad cuando el servicio lo permita.
+
+Si se utiliza exclusivamente almacenamiento local, explica que los datos pueden perderse al borrar el almacenamiento del navegador y ofrece una exportación de respaldo.
+
+No solicites ni almacenes información médica innecesaria.
+
+## 17. REQUISITOS DE CALIDAD
+
+La aplicación debe:
+
+- Tener navegación funcional.
+- Permitir crear, editar y eliminar registros.
+- Calcular correctamente calorías y macronutrientes.
+- Actualizar indicadores al modificar datos.
+- Manejar fechas, unidades y zonas horarias de forma consistente.
+- Validar números negativos, campos obligatorios y datos imposibles.
+- Mostrar estados vacíos y errores comprensibles.
+- Evitar divisiones por cero y gráficos sin datos.
+- Funcionar en dispositivos móviles y escritorio.
+- Mantener una estructura de código modular.
+- Incluir instrucciones de instalación y configuración.
+- Evitar registros duplicados al guardar una misma operación.
+- No incluir credenciales ficticias presentadas como reales.
+- No mostrar datos de demostración como si pertenecieran al usuario.
+
+## 18. PLAN DE DESARROLLO POR ETAPAS
+
+Desarrolla el producto incrementalmente.
+
+### Etapa 1 — Fundamentos
+- Inspección de la plataforma.
+- Arquitectura.
+- Diseño visual.
+- Navegación.
+- Perfil editable.
+- Persistencia inicial.
+- Modelo de datos.
+
+### Etapa 2 — Seguimiento corporal
+- Peso.
+- Promedios semanales.
+- Medidas corporales.
+- Gráficos de tendencia.
+- Objetivos.
+
+### Etapa 3 — Nutrición
+- Objetivos calóricos.
+- Macros.
+- Biblioteca de alimentos.
+- Registro de comidas.
+- Resumen diario.
+- Historial nutricional.
+
+### Etapa 4 — Entrenamiento
+- Programas PPL.
+- Sesiones.
+- Series y repeticiones.
+- Historial de ejercicios.
+- Progresión de cargas.
+
+### Etapa 5 — Actividad y recuperación
+- Pasos.
+- Cardio.
+- Sueño.
+- Fatiga.
+- Energía.
+- Hábitos.
+
+### Etapa 6 — Fotografías y análisis
+- Galería privada.
+- Comparación visual.
+- Informes.
+- Revisión semanal.
+- Sugerencias de ajuste calórico.
+
+### Etapa 7 — Validación y publicación
+- Pruebas.
+- Corrección de errores.
+- Seguridad.
+- Responsive.
+- Documentación.
+- Despliegue, si está disponible.
+
+Cada etapa debe entregar una versión funcional y comprobable antes de pasar a la siguiente.
+
+## 19. CRITERIOS DE ACEPTACIÓN
+
+Considera el MVP aprobado cuando se pueda verificar que:
+
+1. El usuario puede editar su perfil sin modificar código.
+2. Un pesaje se guarda y aparece en el historial.
+3. El promedio semanal se calcula correctamente.
+4. Se pueden registrar medidas corporales.
+5. El registro de alimentos actualiza calorías y macros.
+6. Editar o eliminar un alimento actualiza los totales.
+7. Las calorías derivadas de los macros se calculan correctamente.
+8. Se puede iniciar y completar un entrenamiento.
+9. Las series y cargas permanecen guardadas tras recargar la página.
+10. Los gráficos utilizan registros reales.
+11. Las fotografías permanecen privadas.
+12. Las revisiones semanales distinguen datos insuficientes de tendencias verificadas.
+13. Las recomendaciones de calorías requieren confirmación del usuario.
+14. La interfaz funciona en móvil y escritorio.
+15. Los datos pueden exportarse y recuperarse según la estrategia de almacenamiento.
+16. No existen errores críticos en los flujos principales.
+
+Incluye pruebas con casos normales, valores límite, datos faltantes y registros históricos.
+
+## 20. FORMA DE TRABAJO Y ENTREGA
+
+Antes de comenzar, presenta brevemente:
+
+1. La arquitectura elegida y sus motivos.
+2. Las tecnologías compatibles con el entorno.
+3. Las limitaciones identificadas.
+4. Las etapas de implementación.
+5. Los riesgos técnicos principales.
+
+Después, comienza a construir la aplicación.
+
+No te limites a describir qué habría que programar. Implementa la primera versión funcional y verifica cada flujo importante.
+
+Si el entorno admite creación de archivos, base de datos, autenticación o despliegue, utiliza las capacidades disponibles en lugar de simularlas.
+
+Si necesitas credenciales o decisiones externas, solicita únicamente las imprescindibles y continúa con las partes que sí puedas implementar.
+
+Al finalizar cada etapa, entrega:
+
+- Funcionalidades implementadas.
+- Archivos o módulos creados.
+- Modelo de datos actualizado.
+- Pruebas ejecutadas y resultados.
+- Errores pendientes.
+- Próximos pasos concretos.
+
+Prioriza primero un producto pequeño que funcione de extremo a extremo y luego amplía sus capacidades sin reescribir innecesariamente la arquitectura.
+
+El resultado final debe ser una aplicación de seguimiento de recomposición corporal seria, privada, útil para el uso cotidiano y preparada para evolucionar a un producto más completo.
